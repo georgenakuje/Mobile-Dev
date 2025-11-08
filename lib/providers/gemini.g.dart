@@ -9,43 +9,6 @@ part of 'gemini.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(firebaseApp)
-const firebaseAppProvider = FirebaseAppProvider._();
-
-final class FirebaseAppProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<FirebaseApp>,
-          FirebaseApp,
-          FutureOr<FirebaseApp>
-        >
-    with $FutureModifier<FirebaseApp>, $FutureProvider<FirebaseApp> {
-  const FirebaseAppProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'firebaseAppProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$firebaseAppHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<FirebaseApp> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<FirebaseApp> create(Ref ref) {
-    return firebaseApp(ref);
-  }
-}
-
 String _$firebaseAppHash() => r'7663fd816ebac4287db82a095568ee3dc843da9a';
 
 @ProviderFor(geminiModel)
