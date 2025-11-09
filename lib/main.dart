@@ -64,6 +64,7 @@ class _MyHomePageState extends State<MyHomePage> {
   DateTime? _selectedDay;
   DateTime? _focusedDay;
   CalendarFormat _calendarFormat = CalendarFormat.month;
+  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -73,32 +74,46 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Color(0xFFB8C4FF)),
-              child: Text(''),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Home'),
-              onTap: () {
-                Navigator.pop(context);
+        child: SafeArea(
+          child: Builder(
+            builder: (drawerContext) => NavigationRail(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (int index) {
+                Navigator.pop(drawerContext);
+
+                if(index == 1){
+                  debugPrint('settings');
+                  Navigator.push( context,
+                    MaterialPageRoute(builder: (context) => ChatApp()) //------------ implement when settings page is made
+                  );
+                }
+                if(index == 2){
+                  debugPrint('chat');
+                  Navigator.push( context,
+                    MaterialPageRoute(builder: (context) => ChatApp())
+                  );
+                }
               },
+              labelType: NavigationRailLabelType.all,
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: Text('Home'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: Text('Settings'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.chat_outlined),
+                  selectedIcon: Icon(Icons.chat),
+                  label: Text('Add/Remove events'),
+                ),
+              ],            
             ),
-            ListTile(
-              leading: const Icon(Icons.chat),
-              title: const Text('Add/Remove events'),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => ProviderScope(child: ChatApp()),
-                  ),
-                );
-              },
-            ),
-          ],
+          ),
         ),
       ),
       body: Center(
