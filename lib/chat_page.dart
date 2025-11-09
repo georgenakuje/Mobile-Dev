@@ -43,45 +43,41 @@ class ChatApp extends ConsumerWidget {
     // Watch the FutureProvider for the GenerativeModel
     final modelAsyncValue = ref.watch(geminiModelProvider);
 
-    return MaterialApp(
-      title: 'Chat Page',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: modelAsyncValue.when(
-        // === State 1: Data Loaded (Model Initialized) ===
-        data: (model) {
-          return const ChatScreen();
-        },
-        // === State 2: Loading ===
-        loading: () {
-          // Display a progress indicator while the model is initializing.
-          return const Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading AI Model...'),
-                ],
-              ),
+  return modelAsyncValue.when(
+      // === State 1: Data Loaded (Model Initialized) ===
+      data: (model) {
+        return const ChatScreen();
+      },
+      // === State 2: Loading ===
+      loading: () {
+        // Display a progress indicator while the model is initializing.
+        return const Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Loading AI Model...'),
+              ],
             ),
-          );
-        },
+          ),
+        );
+      },
 
-        // === State 3: Error Occurred ===
-        error: (error, stackTrace) {
-          // Display an error message if the model failed to load.
-          return Scaffold(
-            body: Center(
-              child: Text(
-                'Failed to load model: $error',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
+      // === State 3: Error Occurred ===
+      error: (error, stackTrace) {
+        // Display an error message if the model failed to load.
+        return Scaffold(
+          body: Center(
+            child: Text(
+              'Failed to load model: $error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
