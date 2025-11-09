@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "472523481959",
+    "project_id": "llmtest-ec773",
+    "storage_bucket": "llmtest-ec773.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:472523481959:android:71748b3d2df5fcc44b45c2",
+        "android_client_info": {
+          "package_name": "com.example.colorist"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCD436p7eZiNjHEd_M8v5zG8K7ITOzx8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:472523481959:android:c6581e1a9064d8a54b45c2",
+        "android_client_info": {
+          "package_name": "com.example.midterm_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCD436p7eZiNjHEd_M8v5zG8K7ITOzx8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:472523481959:android:d63b3ec1795566984b45c2",
+        "android_client_info": {
+          "package_name": "llm.test"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCD436p7eZiNjHEd_M8v5zG8K7ITOzx8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
