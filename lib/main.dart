@@ -10,6 +10,14 @@ import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env"); //load api keys
+
+  await Firebase.initializeApp(
+    name: 'llmtest-ec773',
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const ProviderScope(child: Calendar()));
 }
 
@@ -66,6 +74,14 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Text(''),
             ),
             ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Home'),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat),
               title: const Text('Add/Remove events'),
               onTap: () {
                 Navigator.of(context).push(
