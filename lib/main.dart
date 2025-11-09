@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:syncfusion_flutter_calendar/calendar.dart'; //Calendar
+import 'package:table_calendar/table_calendar.dart';
 import 'package:file_picker/file_picker.dart'; //File Picker
 
 void main() {
@@ -41,35 +41,65 @@ void pickFile() async{
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  DateTime? _selectedDay;
+  DateTime? _focusedDay;
+  CalendarFormat _calendarFormat = CalendarFormat.twoWeeks;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: TextButton(onPressed: () {}, child: Icon(Icons.menu)),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          children: <Widget>[
-            Padding(
-              padding: EdgeInsets.only(top: 20.0),
-              child: SfCalendar(
-                view: CalendarView.schedule,
-              ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Color(0xFFB8C4FF)),
+              child: Text(''),
             ),
-            Padding(
-              padding: EdgeInsets.only(top: 50.0),
-              child: FilledButton(
-                onPressed: pickFile,
-                child: const Text('Upload'),
-              ),
+            ListTile(
+              title: const Text('Add/Remove events'),
+              onTap: () {
+              },
             ),
           ],
         ),
       ),
+      body: Center(
+          child: Padding(
+            padding: EdgeInsets.only(top: 20.0),
+            child: Column(
+              children: <Widget>[
+                TableCalendar(  firstDay: DateTime.now(),
+                  lastDay: DateTime.utc(2030, 3, 14),
+                  focusedDay: DateTime.now(),
+                  selectedDayPredicate: (day) {
+                    return isSameDay(_selectedDay, day);
+                  },
+                  onDaySelected: (selectedDay, focusedDay) {
+                    setState(() {
+                      _selectedDay = selectedDay;
+                      _focusedDay = focusedDay; // update `_focusedDay` here as well
+                    });
+                  },
+                  calendarFormat: _calendarFormat,
+                  onFormatChanged: (format) {
+                    setState(() {
+                      _calendarFormat = format;
+                    });
+                  },
+                ),
+                FilledButton(
+                  onPressed: pickFile,
+                  child: const Text('Upload'),
+                )
+              ],
+            ),
+          )
+      ),
     );
   }
 }
-
-
