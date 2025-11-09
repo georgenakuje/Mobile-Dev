@@ -8,15 +8,22 @@ import 'chat_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env"); //load api keys
 
-  await Firebase.initializeApp(
-    name: 'llmtest-ec773',
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } else {
+    await Firebase.initializeApp(
+      name: 'llmtest-ec773',
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
 
   runApp(const ProviderScope(child: Calendar()));
 }
@@ -45,7 +52,7 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-void pickFile() async{
+void pickFile() async {
   FilePickerResult? result = await FilePicker.platform.pickFiles();
 
   if (result != null) {
@@ -85,7 +92,9 @@ class _MyHomePageState extends State<MyHomePage> {
               title: const Text('Add/Remove events'),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context)=>ChatApp())
+                  MaterialPageRoute(
+                    builder: (context) => ProviderScope(child: ChatApp()),
+                  ),
                 );
               },
             ),
@@ -93,36 +102,34 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       body: Center(
-          child: Padding(
-            padding: EdgeInsets.only(top: 20.0),
-            child: Column(
-              children: <Widget>[
-                TableCalendar(  firstDay: DateTime.now(),
-                  lastDay: DateTime.utc(2030, 3, 14),
-                  focusedDay: DateTime.now(),
-                  selectedDayPredicate: (day) {
-                    return isSameDay(_selectedDay, day);
-                  },
-                  onDaySelected: (selectedDay, focusedDay) {
-                    setState(() {
-                      _selectedDay = selectedDay;
-                      _focusedDay = focusedDay;
-                    });
-                  },
-                  calendarFormat: _calendarFormat,
-                  onFormatChanged: (format) {
-                    setState(() {
-                      _calendarFormat = format;
-                    });
-                  },
-                ),
-                FilledButton(
-                  onPressed: pickFile,
-                  child: const Text('Upload'),
-                )
-              ],
-            ),
-          )
+        child: Padding(
+          padding: EdgeInsets.only(top: 20.0),
+          child: Column(
+            children: <Widget>[
+              TableCalendar(
+                firstDay: DateTime.now(),
+                lastDay: DateTime.utc(2030, 3, 14),
+                focusedDay: DateTime.now(),
+                selectedDayPredicate: (day) {
+                  return isSameDay(_selectedDay, day);
+                },
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                },
+                calendarFormat: _calendarFormat,
+                onFormatChanged: (format) {
+                  setState(() {
+                    _calendarFormat = format;
+                  });
+                },
+              ),
+              FilledButton(onPressed: pickFile, child: const Text('Upload')),
+            ],
+          ),
+        ),
       ),
     );
   }
