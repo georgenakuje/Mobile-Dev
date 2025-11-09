@@ -3,13 +3,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:file_picker/file_picker.dart'; //File Picker
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'chat_page.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async{
+  runApp(const ProviderScope(child: Calendar()));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class Calendar extends StatelessWidget {
+  const Calendar({super.key});
 
   // This widget is the root of your application.
   @override
@@ -17,7 +22,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Calendar App',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF5D5F6E)),
+        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFFB8C4FF)),
       ),
       home: const MyHomePage(title: ''),
     );
@@ -43,7 +48,7 @@ void pickFile() async{
 class _MyHomePageState extends State<MyHomePage> {
   DateTime? _selectedDay;
   DateTime? _focusedDay;
-  CalendarFormat _calendarFormat = CalendarFormat.twoWeeks;
+  CalendarFormat _calendarFormat = CalendarFormat.month;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +68,9 @@ class _MyHomePageState extends State<MyHomePage> {
             ListTile(
               title: const Text('Add/Remove events'),
               onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context)=>ChatApp())
+                );
               },
             ),
           ],
@@ -82,7 +90,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   onDaySelected: (selectedDay, focusedDay) {
                     setState(() {
                       _selectedDay = selectedDay;
-                      _focusedDay = focusedDay; // update `_focusedDay` here as well
+                      _focusedDay = focusedDay;
                     });
                   },
                   calendarFormat: _calendarFormat,

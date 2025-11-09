@@ -1,16 +1,9 @@
-# midterm_project
+# Mobile Dev Project
 
-A new Flutter project.
+A Calendar App with LLM Integration
 
-## Getting Started
+## Instructions
 
-This project is a starting point for a Flutter application.
+1. put the .env file for your firebase Generative Language API in the install root directory  
+2. `run flutter pub get` in installed root directory
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
