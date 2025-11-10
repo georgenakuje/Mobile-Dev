@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:mobile_dev_project/event_selector.dart';
 import 'package:mobile_dev_project/utils.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:file_picker/file_picker.dart'; //File Picker
@@ -148,6 +149,11 @@ class _MyHomePageState extends State<MyHomePage> {
                     context,
                     MaterialPageRoute(builder: (context) => ChatApp()),
                   );
+                } else if (index == 3){
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => EventSelector()),
+                  );
                 }
               },
               labelType: NavigationRailLabelType.all,
@@ -165,6 +171,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 NavigationRailDestination(
                   icon: Icon(Icons.chat_outlined),
                   selectedIcon: Icon(Icons.chat),
+                  label: Text('AI chat'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.event),
+                  selectedIcon: Icon(Icons.event),
                   label: Text('Add/Remove events'),
                 ),
               ],

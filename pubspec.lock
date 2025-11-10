@@ -454,6 +454,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.7+1"
+  flutter_picker_plus:
+    dependency: "direct main"
+    description:
+      name: flutter_picker_plus
+      sha256: "01875c2a607720ec1adf6c1524719cf396fed1938bb89be23d53cbc0946dc4ed"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.5.4"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
