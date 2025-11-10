@@ -9,7 +9,6 @@ import './services/gemini_chat_service.dart';
 import 'ics_import.dart';
 import 'package:intl/intl.dart';
 
-
 /// A simple model to represent a single chat message.
 class Message {
   final String text;
@@ -47,7 +46,7 @@ class ChatApp extends ConsumerWidget {
     // Watch the FutureProvider for the GenerativeModel
     final modelAsyncValue = ref.watch(geminiModelProvider);
 
-  return modelAsyncValue.when(
+    return modelAsyncValue.when(
       // === State 1: Data Loaded (Model Initialized) ===
       data: (model) {
         return const ChatScreen();
@@ -138,8 +137,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     respond(userMessageText);
   }
 
-  
-
   // Function to call the LLM service
   void respond(String message) async {
     // Read the chat service provider
@@ -202,8 +199,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             : Message.error(response.error ?? 'Unknown error'),
       );
     });
-}
-
+  }
 
   // Function to copy text to the clipboard and show a confirmation
   void _copyToClipboard(String text) async {
@@ -254,7 +250,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
     );
   }
-
 
   // Helper widget to build the message input area
   Widget _buildTextComposer() {
