@@ -1,39 +1,159 @@
 import 'dart:collection';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 
 class Event {
+  final int? id;
   final String title;
   final DateTime start;
   final DateTime end;
-  const Event(this.title, this.start, this.end);
+
+  const Event({
+    this.id,
+    required this.title,
+    required this.start,
+    required this.end,
+  });
+
   @override
   String toString() => title;
+
+  // Convert an Event object into a Map for database insertion
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      // Store DateTime objects as a standard integer (milliseconds since epoch)
+      'start_time': start.millisecondsSinceEpoch,
+      'end_time': end.millisecondsSinceEpoch,
+    };
+  }
+
+  // Convert a Map from the database into an Event object
+  factory Event.fromMap(Map<String, dynamic> map) {
+    return Event(
+      id: map['id'],
+      title: map['title'],
+      start: DateTime.fromMillisecondsSinceEpoch(map['start_time']),
+      end: DateTime.fromMillisecondsSinceEpoch(map['end_time']),
+    );
+  }
 }
 
 final kToday = DateTime.now();
 final kFirstDay = DateTime(kToday.year, kToday.month - 3, kToday.day);
 final kLastDay = DateTime(kToday.year, kToday.month + 3, kToday.day);
 
-int getHashCode(DateTime key) => key.day * 1000000 + key.month * 10000 + key.year;
+int getHashCode(DateTime key) =>
+    key.day * 1000000 + key.month * 10000 + key.year;
 
 DateTime _d(DateTime d) => DateTime(d.year, d.month, d.day);
 
-final kEvents = LinkedHashMap<DateTime, List<Event>>(
-  equals: isSameDay,
-  hashCode: getHashCode,
-)..addAll({
-  _d(kToday): [
-    Event('Meeting', DateTime(kToday.year, kToday.month, kToday.day, 9, 0),
-        DateTime(kToday.year, kToday.month, kToday.day, 10, 0)),
-    Event('Lunch', DateTime(kToday.year, kToday.month, kToday.day, 12, 30),
-        DateTime(kToday.year, kToday.month, kToday.day, 13, 30)),
-  ],
-  _d(kToday.add(const Duration(days: 1))): [
-    Event('Workout', DateTime(kToday.year, kToday.month, kToday.day + 1, 18, 0),
-        DateTime(kToday.year, kToday.month, kToday.day + 1, 19, 0)),
-  ],
-  _d(kToday.subtract(const Duration(days: 1))): [
-    Event('Study', DateTime(kToday.year, kToday.month, kToday.day - 1, 16, 0),
-        DateTime(kToday.year, kToday.month, kToday.day - 1, 17, 30)),
-  ],
-});
+// --- Database Helper Class ---
+
+class DatabaseHelper {
+  static final DatabaseHelper _instance = DatabaseHelper._internal();
+  factory DatabaseHelper() => _instance;
+  DatabaseHelper._internal();
+
+  static Database? _database;
+  static const String tableName = 'events';
+  static const String databaseName = 'event_database.db';
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDatabase();
+    return _database!;
+  }
+
+  Future<Database> _initDatabase() async {
+    final databasePath = await getDatabasesPath();
+    final path = join(databasePath, databaseName);
+
+    return await openDatabase(path, version: 1, onCreate: _onCreate);
+  }
+
+  // This function is called when the database is created for the first time.
+  Future<void> _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE $tableName(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        start_time INTEGER,
+        end_time INTEGER
+      )
+    ''');
+
+    // Add initial hardcoded entries
+    final initialEvents = [
+      Event(
+        title: 'Meeting',
+        start: DateTime(kToday.year, kToday.month, kToday.day, 9, 0),
+        end: DateTime(kToday.year, kToday.month, kToday.day, 10, 0),
+      ),
+      Event(
+        title: 'Lunch',
+        start: DateTime(kToday.year, kToday.month, kToday.day, 12, 30),
+        end: DateTime(kToday.year, kToday.month, kToday.day, 13, 30),
+      ),
+      Event(
+        title: 'Workout',
+        start: DateTime(kToday.year, kToday.month, kToday.day + 1, 18, 0),
+        end: DateTime(kToday.year, kToday.month, kToday.day + 1, 19, 0),
+      ),
+      Event(
+        title: 'Study',
+        start: DateTime(kToday.year, kToday.month, kToday.day - 1, 16, 0),
+        end: DateTime(kToday.year, kToday.month, kToday.day - 1, 17, 30),
+      ),
+    ];
+
+    final batch = db.batch();
+    for (var event in initialEvents) {
+      batch.insert(tableName, event.toMap());
+    }
+    await batch.commit(noResult: true);
+  }
+
+  // CRUD Operation: Insert a new event
+  Future<int> insertEvent(Event event) async {
+    final db = await database;
+    return await db.insert(
+      tableName,
+      event.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // Fetch all events
+  Future<List<Event>> getAllEvents() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(tableName);
+
+    // Convert List<Map<String, dynamic>> to List<Event>
+    return List.generate(maps.length, (i) {
+      return Event.fromMap(maps[i]);
+    });
+  }
+}
+
+Future<LinkedHashMap<DateTime, List<Event>>> getEventsFromDatabase() async {
+  final dbHelper = DatabaseHelper();
+  final allEvents = await dbHelper.getAllEvents();
+
+  final eventsMap = LinkedHashMap<DateTime, List<Event>>(
+    equals: isSameDay,
+    hashCode: getHashCode,
+  );
+
+  for (var event in allEvents) {
+    final day = _d(event.start);
+    if (eventsMap[day] == null) {
+      eventsMap[day] = [];
+    }
+    eventsMap[day]!.add(event);
+  }
+
+  return eventsMap;
+}

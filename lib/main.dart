@@ -1,10 +1,10 @@
 import 'dart:io';
-
+import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter_picker_plus/picker.dart';
-import 'package:mobile_dev_project/utils.dart';
+import 'utils.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:file_picker/file_picker.dart'; //File Picker
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'chat_page.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -13,6 +13,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,14 +38,14 @@ void main() async {
 class Calendar extends StatelessWidget {
   const Calendar({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Calendar App',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFFB8C4FF)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB8C4FF)),
       ),
+      // MyHomePage is wrapped in a FutureBuilder internally now.
       home: const MyHomePage(title: ''),
     );
   }
@@ -75,23 +78,33 @@ void _showDateTimePicker(BuildContext context) {
     title: const Text('Select Date & Time'),
     onConfirm: (Picker picker, List<int> value) {
       final dateTime = (picker.adapter as DateTimePickerAdapter).value;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Selected: $dateTime')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Selected: $dateTime')));
     },
   ).showModal(context);
 }
 
-List<Event> _getEventsForDay(DateTime day) => kEvents[day] ?? [];
-
 class _MyHomePageState extends State<MyHomePage> {
+  // Use a Future to hold the result of the async database call
+  late Future<LinkedHashMap<DateTime, List<Event>>> _eventsFuture;
+
   DateTime? _selectedDay;
   DateTime _focusedDay = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
   int _selectedIndex = 0;
 
   late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
-  late final ValueNotifier<List<Event>> _selectedEvents;
+  // Initialize with an empty value listener until events are loaded
+  late ValueNotifier<List<Event>> _selectedEvents = ValueNotifier([]);
+
+  // Helper function to get events for a day from the map
+  List<Event> _getEventsForDay(
+    DateTime day,
+    LinkedHashMap<DateTime, List<Event>> eventsMap,
+  ) {
+    return eventsMap[day] ?? [];
+  }
 
   Future<void> _requestNotificationPermission() async {
     if (Platform.isAndroid && await Permission.notification.isDenied) {
@@ -100,16 +113,16 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   static const AndroidNotificationDetails androidPlatformChannelSpecifics =
-  AndroidNotificationDetails(
-    'your_channel_id',
-    'your_channel_name',
-    channelDescription: 'your channel description',
-    importance: Importance.max,
-    priority: Priority.high,
-  );
+      AndroidNotificationDetails(
+        'your_channel_id',
+        'your_channel_name',
+        channelDescription: 'your channel description',
+        importance: Importance.max,
+        priority: Priority.high,
+      );
 
   static const NotificationDetails platformChannelSpecifics =
-  NotificationDetails(android: androidPlatformChannelSpecifics);
+      NotificationDetails(android: androidPlatformChannelSpecifics);
 
   Future<void> _initNotifications() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -125,14 +138,14 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    // Call the db to get events
+    _eventsFuture = getEventsFromDatabase();
+
     flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     _initNotifications();
     _requestNotificationPermission();
 
     _selectedDay = _focusedDay;
-    _selectedEvents = ValueNotifier<List<Event>>(
-      _getEventsForDay(_selectedDay!),
-    );
   }
 
   @override
@@ -186,82 +199,118 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       ),
+      body: FutureBuilder<LinkedHashMap<DateTime, List<Event>>>(
+        future: _eventsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            // Show a loading indicator while fetching data
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            // Show an error message if the future fails
+            return Center(
+              child: Text('Error loading events: ${snapshot.error}'),
+            );
+          } else if (snapshot.hasData) {
+            // Data successfully loaded, proceed with the calendar view
+            final kEvents = snapshot.data!;
 
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.only(top: 20.0),
-          child: Column(
-            children: <Widget>[
-              TableCalendar<Event>(
-                firstDay: kFirstDay,
-                lastDay: kLastDay,
-                focusedDay: _focusedDay,
-                eventLoader: _getEventsForDay,
-                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                onDaySelected: (selectedDay, focusedDay) {
-                  if (!isSameDay(_selectedDay, selectedDay)) {
-                    setState(() {
-                      _selectedDay = selectedDay;
-                      _focusedDay = focusedDay;
-                    });
-                    _selectedEvents.value = _getEventsForDay(selectedDay);
-                  }
-                },
-                calendarFormat: _calendarFormat,
-                onFormatChanged: (format) => setState(() => _calendarFormat = format),
-                onPageChanged: (focusedDay) => _focusedDay = focusedDay,
-              ),
-              const SizedBox(height: 8.0),
-              FilledButton(
-                onPressed: pickFile,
-                child: const Text('Upload'),
-              ),
-              ElevatedButton(
-                onPressed: () => _showDateTimePicker(context),
-                child: const Text('Add Event'),
-              ),
-              const SizedBox(height: 8.0),
-              Expanded(
-                child: ValueListenableBuilder<List<Event>>(
-                  valueListenable: _selectedEvents,
-                  builder: (context, value, _) {
-                    if (value.isEmpty) return const Center(child: Text('No events'));
-                    return ListView.builder(
-                      itemCount: value.length,
-                      itemBuilder: (context, index) {
-                        final e = value[index];
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                          decoration: BoxDecoration(
-                            border: Border.all(),
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: ListTile(
-                            onTap: () async => await flutterLocalNotificationsPlugin.show(
-                              0,
-                              'These are your event details!',
-                              '$e' + ' starting at ${e.start.hour.toString()}',
-                              platformChannelSpecifics,
-                              payload: 'Notification Payload',
-                            ),
-                            title: Text(e.title),
-                            subtitle: Text(
-                              '${e.start.hour.toString().padLeft(2, '0')}:${e.start.minute.toString().padLeft(2, '0')}'
+            // Initialize/Update _selectedEvents with the first day's events
+            if (_selectedEvents.value.isEmpty && _selectedDay != null) {
+              _selectedEvents = ValueNotifier<List<Event>>(
+                _getEventsForDay(_selectedDay!, kEvents),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(top: 20.0),
+              child: Column(
+                children: <Widget>[
+                  TableCalendar<Event>(
+                    firstDay: kFirstDay,
+                    lastDay: kLastDay,
+                    focusedDay: _focusedDay,
+                    // Pass a function that uses the loaded kEvents map
+                    eventLoader: (day) => _getEventsForDay(day, kEvents),
+                    selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                    onDaySelected: (selectedDay, focusedDay) {
+                      if (!isSameDay(_selectedDay, selectedDay)) {
+                        setState(() {
+                          _selectedDay = selectedDay;
+                          _focusedDay = focusedDay;
+                        });
+                        // Update the ValueNotifier with events from the loaded map
+                        _selectedEvents.value = _getEventsForDay(
+                          selectedDay,
+                          kEvents,
+                        );
+                      }
+                    },
+                    calendarFormat: _calendarFormat,
+                    onFormatChanged: (format) =>
+                        setState(() => _calendarFormat = format),
+                    onPageChanged: (focusedDay) => _focusedDay = focusedDay,
+                  ),
+                  const SizedBox(height: 8.0),
+                  FilledButton(
+                    onPressed: pickFile,
+                    child: const Text('Upload'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _showDateTimePicker(context),
+                    child: const Text('Add Event'),
+                  ),
+                  const SizedBox(height: 8.0),
+                  Expanded(
+                    child: ValueListenableBuilder<List<Event>>(
+                      valueListenable: _selectedEvents,
+                      builder: (context, value, _) {
+                        if (value.isEmpty) {
+                          return const Center(child: Text('No events'));
+                        }
+                        return ListView.builder(
+                          itemCount: value.length,
+                          itemBuilder: (context, index) {
+                            final e = value[index];
+                            return Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: 4.0,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(),
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              child: ListTile(
+                                onTap: () async =>
+                                    await flutterLocalNotificationsPlugin.show(
+                                      0,
+                                      'These are your event details!',
+                                      '$e' +
+                                          ' starting at ${e.start.hour.toString()}',
+                                      platformChannelSpecifics,
+                                      payload: 'Notification Payload',
+                                    ),
+                                title: Text(e.title),
+                                subtitle: Text(
+                                  '${e.start.hour.toString().padLeft(2, '0')}:${e.start.minute.toString().padLeft(2, '0')}'
                                   ' - '
                                   '${e.end.hour.toString().padLeft(2, '0')}:${e.end.minute.toString().padLeft(2, '0')}',
-                            ),
-                          ),
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            );
+          }
+          // Default fallback
+          return const SizedBox.shrink();
+        },
       ),
     );
   }
 }
-
