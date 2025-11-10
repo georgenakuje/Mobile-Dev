@@ -15,8 +15,13 @@ dependencies:
   flutter_markdown: ^0.7.0
   flutter_riverpod: ^3.0.0
   riverpod_annotation: ^3.0.0
-  table_calendar: ^3.2.0
   file_picker: ^10.3.3
+  intl: ^0.20.2
+  icalendar_parser: ^2.1.0
+  json_annotation: ^4.9.0
+  build_runner: ^2.7.1
+  json_serializable: ^6.11.1
+  table_calendar: ^3.2.0
   flutter_local_notifications: ^19.5.0
   permission_handler: ^12.0.1
 
@@ -24,10 +29,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  build_runner: ^2.7.1
   riverpod_generator: ^3.0.0
   riverpod_lint: ^3.0.0
-  json_serializable: ^6.11.1
 
 flutter:
   assets:

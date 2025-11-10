@@ -135,24 +135,44 @@ class _MyHomePageState extends State<MyHomePage> {
             builder: (drawerContext) => NavigationRail(
               selectedIndex: _selectedIndex,
               onDestinationSelected: (int index) {
+                setState(() => _selectedIndex = index);
                 Navigator.pop(drawerContext);
+
                 if (index == 1) {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => ChatApp()));
-                }
-                if (index == 2) {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => ChatApp()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ChatApp()),
+                  );
+                } else if (index == 2) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ChatApp()),
+                  );
                 }
               },
               labelType: NavigationRailLabelType.all,
               destinations: const [
-                NavigationRailDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: Text('Home')),
-                NavigationRailDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: Text('Settings')),
-                NavigationRailDestination(icon: Icon(Icons.chat_outlined), selectedIcon: Icon(Icons.chat), label: Text('Add/Remove events')),
+                NavigationRailDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: Text('Home'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: Text('Settings'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.chat_outlined),
+                  selectedIcon: Icon(Icons.chat),
+                  label: Text('Add/Remove events'),
+                ),
               ],
             ),
           ),
         ),
       ),
+
       body: Center(
         child: Padding(
           padding: const EdgeInsets.only(top: 20.0),
