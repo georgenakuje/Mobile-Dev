@@ -9,8 +9,6 @@ part of 'gemini.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-String _$firebaseAppHash() => r'7663fd816ebac4287db82a095568ee3dc843da9a';
-
 @ProviderFor(geminiModel)
 const geminiModelProvider = GeminiModelProvider._();
 
@@ -48,7 +46,7 @@ final class GeminiModelProvider
   }
 }
 
-String _$geminiModelHash() => r'eb62604b076c90464d8b13e3e4f9b65065ae0959';
+String _$geminiModelHash() => r'cab34641565fd1823286344d4b0d725d0113464d';
 
 @ProviderFor(chatSession)
 const chatSessionProvider = ChatSessionProvider._();

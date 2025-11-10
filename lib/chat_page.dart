@@ -3,8 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import 'event.dart';
 import './providers/gemini.dart';
 import './services/gemini_chat_service.dart';
+import 'ics_import.dart';
+import 'package:intl/intl.dart';
+
 
 /// A simple model to represent a single chat message.
 class Message {
@@ -138,6 +142,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     respond(userMessageText);
   }
 
+  
+
   // Function to call the LLM service
   void respond(String message) async {
     // Read the chat service provider
@@ -168,6 +174,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
+  Future<void> _importAndSummarizeIcs() async {
+    final events = await importIcsFile();
+    if (events.isEmpty) return;
+
+    final formatter = DateFormat('EEE MMM d, h:mm a');
+    final summaryPrompt = StringBuffer();
+
+    summaryPrompt.writeln("These events were imported from a calendar file:");
+    for (final e in events) {
+      summaryPrompt.writeln(
+        "- ${e.title} (${formatter.format(e.startTime)} to ${formatter.format(e.endTime)}) at ${e.location}",
+      );
+    }
+    summaryPrompt.writeln("Summarize these events briefly for the user.");
+
+    // Add user prompt visually
+    setState(() {
+      _messages.add(Message.user(summaryPrompt.toString()));
+      _messages.add(Message.loading());
+    });
+
+    final chatService = ref.read(geminiChatServiceProvider);
+    final response = await chatService.sendMessage(summaryPrompt.toString());
+
+    setState(() {
+      _messages.removeWhere((m) => m.isLoading);
+      _messages.add(
+        response.isSuccess && response.content != null
+            ? Message.llm(response.content!)
+            : Message.error(response.error ?? 'Unknown error'),
+      );
+    });
+}
+
+
   // Function to copy text to the clipboard and show a confirmation
   void _copyToClipboard(String text) async {
     await Clipboard.setData(ClipboardData(text: text));
@@ -183,7 +224,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Simple LLM Chat Interface')),
+      appBar: AppBar(
+        title: const Text('Simple LLM Chat Interface'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.upload_file),
+            tooltip: 'Import .ics file',
+            onPressed: _importAndSummarizeIcs,
+          ),
+        ],
+      ),
       body: Column(
         children: <Widget>[
           // Message List
@@ -193,7 +243,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               reverse: true, // Show newest messages at the bottom
               itemCount: _messages.length,
               itemBuilder: (_, int index) {
-                // Read messages from the back of the list (index 0 is the newest)
                 final message = _messages[_messages.length - 1 - index];
                 return _buildMessage(message);
               },
@@ -209,6 +258,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
     );
   }
+
 
   // Helper widget to build the message input area
   Widget _buildTextComposer() {

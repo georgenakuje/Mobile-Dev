@@ -10,7 +10,6 @@ void main() async {
   await dotenv.load(fileName: ".env"); //load api keys
 
   await Firebase.initializeApp(
-    name: 'llmtest-ec773',
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
