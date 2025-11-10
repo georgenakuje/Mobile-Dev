@@ -209,6 +209,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 onPageChanged: (focusedDay) => _focusedDay = focusedDay,
               ),
               const SizedBox(height: 8.0),
+              FilledButton(
+                onPressed: pickFile,
+                child: const Text('Upload'),
+              ),
+              const SizedBox(height: 8.0),
               Expanded(
                 child: ValueListenableBuilder<List<Event>>(
                   valueListenable: _selectedEvents,
@@ -220,7 +225,10 @@ class _MyHomePageState extends State<MyHomePage> {
                         final e = value[index];
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                          decoration: BoxDecoration(border: Border.all(), borderRadius: BorderRadius.circular(12.0)),
+                          decoration: BoxDecoration(
+                            border: Border.all(),
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
                           child: ListTile(
                             onTap: () async => await flutterLocalNotificationsPlugin.show(
                               0,
@@ -242,7 +250,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   },
                 ),
               ),
-              FilledButton(onPressed: pickFile, child: const Text('Upload')),
             ],
           ),
         ),
