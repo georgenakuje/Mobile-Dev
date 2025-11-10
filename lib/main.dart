@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:mobile_dev_project/event_selector.dart';
+import 'package:flutter_picker_plus/picker.dart';
 import 'package:mobile_dev_project/utils.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:file_picker/file_picker.dart'; //File Picker
@@ -62,6 +62,24 @@ void pickFile() async {
   if (result != null) {
     File file = File(result.files.single.path!);
   }
+}
+
+void _showDateTimePicker(BuildContext context) {
+  Picker(
+    adapter: DateTimePickerAdapter(
+      type: PickerDateTimeType.kYMDHM,
+      value: DateTime.now(),
+      minValue: DateTime(1950),
+      maxValue: DateTime(2050),
+    ),
+    title: const Text('Select Date & Time'),
+    onConfirm: (Picker picker, List<int> value) {
+      final dateTime = (picker.adapter as DateTimePickerAdapter).value;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Selected: $dateTime')),
+      );
+    },
+  ).showModal(context);
 }
 
 List<Event> _getEventsForDay(DateTime day) => kEvents[day] ?? [];
@@ -144,16 +162,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     context,
                     MaterialPageRoute(builder: (context) => ChatApp()),
                   );
-                } else if (index == 2) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ChatApp()),
-                  );
-                } else if (index == 3){
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => EventSelector()),
-                  );
                 }
               },
               labelType: NavigationRailLabelType.all,
@@ -164,19 +172,14 @@ class _MyHomePageState extends State<MyHomePage> {
                   label: Text('Home'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
-                  label: Text('Settings'),
-                ),
-                NavigationRailDestination(
                   icon: Icon(Icons.chat_outlined),
                   selectedIcon: Icon(Icons.chat),
                   label: Text('AI chat'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.event),
-                  selectedIcon: Icon(Icons.event),
-                  label: Text('Add/Remove events'),
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: Text('Settings'),
                 ),
               ],
             ),
@@ -212,6 +215,10 @@ class _MyHomePageState extends State<MyHomePage> {
               FilledButton(
                 onPressed: pickFile,
                 child: const Text('Upload'),
+              ),
+              ElevatedButton(
+                onPressed: () => _showDateTimePicker(context),
+                child: const Text('Add Event'),
               ),
               const SizedBox(height: 8.0),
               Expanded(
