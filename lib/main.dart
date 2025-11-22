@@ -13,12 +13,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:intl/intl.dart';
 
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-
-final timeFormatter = DateFormat('h:mm a');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,151 +67,22 @@ void pickFile() async {
   }
 }
 
-void addEditEvent(BuildContext context, int specifier, Event? event) async {
-  DateTime? start = DateTime.now();
-  DateTime? end = DateTime.now();
-  String? evTitle = "Name of event";
-  if (specifier == 1) {
-    start = event?.start;
-    end = event?.end;
-    evTitle = event?.title;
-  }
-
-  Event? newEvent = await addEditEventPopOut(context, start, end, evTitle, specifier);
-  final db_helper = DatabaseHelper();
-  int id;
-
-  if (newEvent != null) {
-    if (specifier == 1) {
-      int id = db_helper.editEvent(evTitle, start, end, newEvent);
-    }
-    else {
-      id = await db_helper.insertEvent(newEvent);
-    }
-  }
-
-
-  // create popup box that has text box for title and 2 text sections
-  // that format a DateTime into readable value
-  // text box onPressed() should allow edit
-  // both time boxes should call _ShowDateTimePicker(context, start/end) respectively
-  // at end of functions should call insertEvent(event) for adding
-  // and function may need to be created for editing existing event
-  // that will take new values and old values so it knows what to replace
-  // also include a delete button if the edit button is pressed (specifier = 1)
-
-
-}
-
-Future<Event?> addEditEventPopOut(BuildContext context, DateTime? start, DateTime? end, String? title, int specifier) async {
-  final titleController = TextEditingController(text: title);
-  String? oldTitle = title;
-  DateTime? oldStart = start;
-
-  return showDialog<Event> (
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Edit event"),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: InputDecoration(labelText: "Title"),
-                ),
-
-                const SizedBox(height: 12),
-
-                Text("Start: ${start.toString()}"),
-                TextButton(
-                    onPressed: () async {
-                      final picked = await _showDateTimePicker(context, start);
-                      if (picked != null) {
-                        start = picked;
-                      }
-                    },
-                    child: Text("Edit Start Time")
-                ),
-
-                Text("Start: ${end.toString()}"),
-                TextButton(
-                    onPressed: () async {
-                      final picked = await _showDateTimePicker(context, start);
-                      if (picked != null) {
-                        end = picked;
-                      }
-                    },
-                    child: Text("Edit End Time")
-                ),
-              ],
-            ),
-          ),
-
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, null),
-                child: Text("Cancel")
-            ),
-
-            if (specifier == 1)
-              TextButton(
-                onPressed: () {
-                  deleteEvent(oldStart, oldTitle);
-                  Navigator.pop(context, null);
-                },
-                child: Text("Delete"),
-              ),
-
-            TextButton(
-                onPressed: () {
-                  Navigator.pop(
-                      context,
-                      Event(
-                        title: titleController.text,
-                        start: start,
-                        end: end,
-                      )
-                  );
-                },
-                child: Text("Save"),
-            ),
-          ],
-        );
-      },
-  );
-}
-
-
-Future<DateTime?> _showDateTimePicker(BuildContext context, DateTime? date) async {
-  DateTime? day;
-
-  await Picker(
+void _showDateTimePicker(BuildContext context) {
+  Picker(
     adapter: DateTimePickerAdapter(
       type: PickerDateTimeType.kYMDHM,
-      value: date,
+      value: DateTime.now(),
       minValue: DateTime(1950),
       maxValue: DateTime(2050),
     ),
     title: const Text('Select Date & Time'),
-    onConfirm: (Picker picker, List<int> value) async {
-      day = (picker.adapter as DateTimePickerAdapter).value;
+    onConfirm: (Picker picker, List<int> value) {
+      final dateTime = (picker.adapter as DateTimePickerAdapter).value;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Selected: $day')));
+      ).showSnackBar(SnackBar(content: Text('Selected: $dateTime')));
     },
   ).showModal(context);
-
-  return day;
-}
-
-void deleteEvent(DateTime? start, String? title) {
-  final db_helper = DatabaseHelper();
-
-  int id = db_helper.deleteEvent(start, title);
 }
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -388,7 +256,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: const Text('Upload'),
                   ),
                   ElevatedButton(
-                    onPressed: () => addEditEvent(0, null),
+                    onPressed: () => _showDateTimePicker(context),
                     child: const Text('Add Event'),
                   ),
                   const SizedBox(height: 8.0),
@@ -412,36 +280,23 @@ class _MyHomePageState extends State<MyHomePage> {
                                 border: Border.all(),
                                 borderRadius: BorderRadius.circular(12.0),
                               ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: ListTile(
-                                      onTap: () async =>
-                                          await flutterLocalNotificationsPlugin.show(
-                                            0,
-                                            'These are your event details!',
-                                            '$e' +
-                                                ' starting at ${e.start.hour.toString()}',
-                                            platformChannelSpecifics,
-                                            payload: 'Notification Payload',
-                                          ),
-                                      title: Text(e.title),
-                                      subtitle: Text(
-                                        '${timeFormatter.format(e.start)}'
-                                        ' - '
-                                        '${timeFormatter.format(e.end)}',
-                                      ),
-                                    )
-                                  ),
-
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () {
-                                        addEditEvent(1, e);
-                                    },
-                                  )
-                                ]
-                              )
+                              child: ListTile(
+                                onTap: () async =>
+                                    await flutterLocalNotificationsPlugin.show(
+                                      0,
+                                      'These are your event details!',
+                                      '$e' +
+                                          ' starting at ${e.start.hour.toString()}',
+                                      platformChannelSpecifics,
+                                      payload: 'Notification Payload',
+                                    ),
+                                title: Text(e.title),
+                                subtitle: Text(
+                                  '${e.start.hour.toString().padLeft(2, '0')}:${e.start.minute.toString().padLeft(2, '0')}'
+                                  ' - '
+                                  '${e.end.hour.toString().padLeft(2, '0')}:${e.end.minute.toString().padLeft(2, '0')}',
+                                ),
+                              ),
                             );
                           },
                         );
