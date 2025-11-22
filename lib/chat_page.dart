@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
-import 'event.dart';
 import './providers/gemini.dart';
 import './services/gemini_chat_service.dart';
 import 'ics_import.dart';
