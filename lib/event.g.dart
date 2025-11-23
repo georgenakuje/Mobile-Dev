@@ -7,12 +7,14 @@ part of 'event.dart';
 // **************************************************************************
 
 Event _$EventFromJson(Map<String, dynamic> json) => Event(
-  id: json['id'] as String,
+  id: (json['id'] as num).toInt(),
   title: json['title'] as String,
   description: json['description'] as String,
   startTime: DateTime.parse(json['startTime'] as String),
   endTime: DateTime.parse(json['endTime'] as String),
-  location: json['location'] as String,
+  rrule: json['rrule'] as String,
+  parentId: (json['parentId'] as num).toInt(),
+  exdate: json['exdate'] as String,
 );
 
 Map<String, dynamic> _$EventToJson(Event instance) => <String, dynamic>{
@@ -21,5 +23,7 @@ Map<String, dynamic> _$EventToJson(Event instance) => <String, dynamic>{
   'description': instance.description,
   'startTime': instance.startTime.toIso8601String(),
   'endTime': instance.endTime.toIso8601String(),
-  'location': instance.location,
+  'rrule': instance.rrule,
+  'parentId': instance.parentId,
+  'exdate': instance.exdate,
 };

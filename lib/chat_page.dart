@@ -176,7 +176,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     summaryPrompt.writeln("These events were imported from a calendar file:");
     for (final e in events) {
       summaryPrompt.writeln(
-        "- ${e.title} (${formatter.format(e.startTime)} to ${formatter.format(e.endTime)}) at ${e.location}",
+        "- ${e.title} (${formatter.format(e.startTime)} to ${formatter.format(e.endTime)})",
       );
     }
     summaryPrompt.writeln("Summarize these events briefly for the user.");

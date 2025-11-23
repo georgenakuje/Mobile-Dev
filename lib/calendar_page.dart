@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'chat_page.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'event.dart';
 
 class Calendar extends StatelessWidget {
   const Calendar({super.key});
@@ -260,15 +261,15 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                                       0,
                                       'These are your event details!',
                                       '$e' +
-                                          ' starting at ${e.start.hour.toString()}',
+                                          ' starting at ${e.startTime.hour.toString()}',
                                       platformChannelSpecifics,
                                       payload: 'Notification Payload',
                                     ),
                                 title: Text(e.title),
                                 subtitle: Text(
-                                  '${e.start.hour.toString().padLeft(2, '0')}:${e.start.minute.toString().padLeft(2, '0')}'
+                                  '${e.startTime.hour.toString().padLeft(2, '0')}:${e.startTime.minute.toString().padLeft(2, '0')}'
                                   ' - '
-                                  '${e.end.hour.toString().padLeft(2, '0')}:${e.end.minute.toString().padLeft(2, '0')}',
+                                  '${e.endTime.hour.toString().padLeft(2, '0')}:${e.endTime.minute.toString().padLeft(2, '0')}',
                                 ),
                               ),
                             );

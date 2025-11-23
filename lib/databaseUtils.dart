@@ -2,44 +2,7 @@ import 'dart:collection';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-
-class Event {
-  final int? id;
-  final String title;
-  final DateTime start;
-  final DateTime end;
-
-  const Event({
-    this.id,
-    required this.title,
-    required this.start,
-    required this.end,
-  });
-
-  @override
-  String toString() => title;
-
-  // Convert an Event object into a Map for database insertion
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      // Store DateTime objects as a standard integer (milliseconds since epoch)
-      'start_time': start.millisecondsSinceEpoch,
-      'end_time': end.millisecondsSinceEpoch,
-    };
-  }
-
-  // Convert a Map from the database into an Event object
-  factory Event.fromMap(Map<String, dynamic> map) {
-    return Event(
-      id: map['id'],
-      title: map['title'],
-      start: DateTime.fromMillisecondsSinceEpoch(map['start_time']),
-      end: DateTime.fromMillisecondsSinceEpoch(map['end_time']),
-    );
-  }
-}
+import 'event.dart';
 
 final kToday = DateTime.now();
 final kFirstDay = DateTime(1900, 1, 1);
@@ -59,7 +22,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static const String tableName = 'events';
-  static const String databaseName = 'event_database.db';
+  static const String databaseName = 'event_database_2.db';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -77,41 +40,33 @@ class DatabaseHelper {
   // This function is called when the database is created for the first time.
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE $tableName(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        start_time INTEGER,
-        end_time INTEGER
-      )
-    ''');
+      CREATE TABLE events(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT,
+      description TEXT,
+      startTime INTEGER,   -- The start of the very first event
+      endTime INTEGER,     -- The end of the very first event
+      rrule TEXT,           -- "" for single events. Example: "FREQ=WEEKLY;BYDAY=MO"
+      parentId INTEGER,    -- -1 if this is a new event. ID of parent if this is an exception.
+      exdate TEXT           -- Comma separated list of dates to exclude (cancelled instances)
+    )''');
 
     // Add initial hardcoded entries
     final initialEvents = [
       Event(
-        title: 'Meeting',
-        start: DateTime(kToday.year, kToday.month, kToday.day, 9, 0),
-        end: DateTime(kToday.year, kToday.month, kToday.day, 10, 0),
-      ),
-      Event(
-        title: 'Lunch',
-        start: DateTime(kToday.year, kToday.month, kToday.day, 12, 30),
-        end: DateTime(kToday.year, kToday.month, kToday.day, 13, 30),
-      ),
-      Event(
-        title: 'Workout',
-        start: DateTime(kToday.year, kToday.month, kToday.day + 1, 18, 0),
-        end: DateTime(kToday.year, kToday.month, kToday.day + 1, 19, 0),
-      ),
-      Event(
-        title: 'Study',
-        start: DateTime(kToday.year, kToday.month, kToday.day - 1, 16, 0),
-        end: DateTime(kToday.year, kToday.month, kToday.day - 1, 17, 30),
+        title: 'Meeting (Default)',
+        startTime: DateTime(kToday.year, kToday.month, kToday.day, 9, 0),
+        endTime: DateTime(kToday.year, kToday.month, kToday.day, 10, 0),
+        description: "Added by default",
+        exdate: "",
+        parentId: -1,
+        rrule: 'RRULE:INTERVAL=2;FREQ=WEEKLY',
       ),
     ];
 
     final batch = db.batch();
     for (var event in initialEvents) {
-      batch.insert(tableName, event.toMap());
+      batch.insert(tableName, event.excludePrimaryKeyMap());
     }
     await batch.commit(noResult: true);
   }
@@ -121,7 +76,7 @@ class DatabaseHelper {
     final db = await database;
     return await db.insert(
       tableName,
-      event.toMap(),
+      event.excludePrimaryKeyMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -133,7 +88,7 @@ class DatabaseHelper {
 
     // Convert List<Map<String, dynamic>> to List<Event>
     return List.generate(maps.length, (i) {
-      return Event.fromMap(maps[i]);
+      return Event.fromJson(maps[i]);
     });
   }
 }
@@ -148,7 +103,7 @@ Future<LinkedHashMap<DateTime, List<Event>>> getEventsFromDatabase() async {
   );
 
   for (var event in allEvents) {
-    final day = _d(event.start);
+    final day = _d(event.startTime);
     if (eventsMap[day] == null) {
       eventsMap[day] = [];
     }

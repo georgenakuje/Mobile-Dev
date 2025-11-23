@@ -42,12 +42,14 @@ Future<List<Event>> importIcsFile() async {
 
       events.add(
         Event(
-          id: (e['uid'] ?? DateTime.now().microsecondsSinceEpoch.toString()),
           title: e['summary'] ?? 'Untitled Event',
           description: e['description'] ?? '',
           startTime: start ?? DateTime.now(),
-          endTime: end ?? (start?.add(const Duration(hours: 1)) ?? DateTime.now()),
-          location: e['location'] ?? '',
+          endTime:
+              end ?? (start?.add(const Duration(hours: 1)) ?? DateTime.now()),
+          rrule: "", //Null for now but can add logic to make it work later
+          parentId: -1,
+          exdate: "",
         ),
       );
     } catch (err, st) {

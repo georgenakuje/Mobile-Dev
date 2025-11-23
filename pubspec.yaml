@@ -27,6 +27,7 @@ dependencies:
   flutter_picker_plus: ^1.5.4
   sqflite: ^2.4.2
   path: ^1.9.1
+  rrule: ^0.2.0
 
 dev_dependencies:
   flutter_test:
