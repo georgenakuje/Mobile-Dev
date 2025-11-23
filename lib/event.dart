@@ -37,3 +37,22 @@ class Event {
     'exdate': exdate,
   };
 }
+
+//Separate class for actually displaying the event,
+class DisplayEvent {
+  final int? id;
+  final String title;
+  final String description;
+  final DateTime startTime;
+  final DateTime endTime;
+  final int parentId;
+
+  DisplayEvent({
+    this.id,
+    required this.title,
+    required this.description,
+    required this.startTime,
+    required this.endTime,
+    required this.parentId,
+  });
+}

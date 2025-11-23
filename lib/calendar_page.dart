@@ -62,7 +62,7 @@ void _showDateTimePicker(BuildContext context) {
 
 class _CalendarHomePage extends State<CalendarHomePage> {
   // Use a Future to hold the result of the async database call
-  late Future<LinkedHashMap<DateTime, List<Event>>> _eventsFuture;
+  late Future<LinkedHashMap<DateTime, List<DisplayEvent>>> _eventsFuture;
 
   DateTime? _selectedDay;
   DateTime _focusedDay = DateTime.now();
@@ -71,12 +71,12 @@ class _CalendarHomePage extends State<CalendarHomePage> {
 
   late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
   // Initialize with an empty value listener until events are loaded
-  late ValueNotifier<List<Event>> _selectedEvents = ValueNotifier([]);
+  late ValueNotifier<List<DisplayEvent>> _selectedEvents = ValueNotifier([]);
 
   // Helper function to get events for a day from the map
-  List<Event> _getEventsForDay(
+  List<DisplayEvent> _getEventsForDay(
     DateTime day,
-    LinkedHashMap<DateTime, List<Event>> eventsMap,
+    LinkedHashMap<DateTime, List<DisplayEvent>> eventsMap,
   ) {
     return eventsMap[day] ?? [];
   }
@@ -174,7 +174,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
           ),
         ),
       ),
-      body: FutureBuilder<LinkedHashMap<DateTime, List<Event>>>(
+      body: FutureBuilder<LinkedHashMap<DateTime, List<DisplayEvent>>>(
         future: _eventsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -191,7 +191,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
 
             // Initialize/Update _selectedEvents with the first day's events
             if (_selectedEvents.value.isEmpty && _selectedDay != null) {
-              _selectedEvents = ValueNotifier<List<Event>>(
+              _selectedEvents = ValueNotifier<List<DisplayEvent>>(
                 _getEventsForDay(_selectedDay!, kEvents),
               );
             }
@@ -200,7 +200,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
               padding: const EdgeInsets.only(top: 20.0),
               child: Column(
                 children: <Widget>[
-                  TableCalendar<Event>(
+                  TableCalendar<DisplayEvent>(
                     firstDay: kFirstDay,
                     lastDay: kLastDay,
                     focusedDay: _focusedDay,
@@ -236,7 +236,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                   ),
                   const SizedBox(height: 8.0),
                   Expanded(
-                    child: ValueListenableBuilder<List<Event>>(
+                    child: ValueListenableBuilder<List<DisplayEvent>>(
                       valueListenable: _selectedEvents,
                       builder: (context, value, _) {
                         if (value.isEmpty) {
