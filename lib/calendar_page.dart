@@ -9,6 +9,10 @@ import 'chat_page.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'event.dart';
+import 'package:intl/intl.dart';
+
+final notifTimeFormatter = DateFormat('h:mm a');
+final pickerTimeFormatter = DateFormat('yyyy:MM:dd h:mm a');
 
 class Calendar extends StatelessWidget {
   const Calendar({super.key});
@@ -42,22 +46,165 @@ void pickFile() async {
   }
 }
 
-void _showDateTimePicker(BuildContext context) {
-  Picker(
+
+
+
+void addEditEvent(BuildContext context, int specifier, Event event) async {
+  DateTime start = DateTime.now();
+  DateTime end = DateTime.now();
+  String evTitle = "New Event";
+  String addOrEdit = "New Event";
+  if (specifier == 1) {
+    start = event.startTime;
+    end = event.endTime;
+    evTitle = event.title;
+    addOrEdit = "Edit Event";
+  }
+
+  Event? newEvent = await addEditEventPopOut(addOrEdit, context, event, evTitle, specifier);
+  final db_helper = DatabaseHelper();
+  int id;
+
+  if (newEvent != null) {
+    if (specifier == 1) {
+      print("Editing");//int id = db_helper.editEvent(evTitle, start, end, newEvent);
+    }
+    else {
+      id = await db_helper.insertEvent(newEvent);
+    }
+  }
+
+
+  // create popup box that has text box for title and 2 text sections
+  // that format a DateTime into readable value
+  // text box onPressed() should allow edit
+  // both time boxes should call _ShowDateTimePicker(context, start/end) respectively
+  // at end of functions should call insertEvent(event) for adding
+  // and function may need to be created for editing existing event
+  // that will take new values and old values so it knows what to replace
+  // also include a delete button if the edit button is pressed (specifier = 1)
+
+
+}
+
+Future<Event?> addEditEventPopOut(String addOrEdit, BuildContext context, Event event, String title, int specifier) async {
+  final titleController = TextEditingController(text: title);
+  String? oldTitle = title;
+  DateTime start = event.startTime;
+  DateTime end = event.endTime;
+  DateTime oldStart = start;
+
+  return showDialog<Event> (
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return AlertDialog(
+        actionsAlignment: MainAxisAlignment.center,
+        title: Text(addOrEdit),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: "Title"),
+              ),
+
+              const SizedBox(height: 12),
+
+              Text("Start:"),
+              TextButton(
+                  onPressed: () async {
+                    final picked = await _showDateTimePicker(context, start);
+                    if (picked != null) {
+                      start = picked;
+                    }
+                  },
+                  child: Text(pickerTimeFormatter.format(start))
+              ),
+
+              Text("End:"),
+              TextButton(
+                  onPressed: () async {
+                    final picked = await _showDateTimePicker(context, start);
+                    if (picked != null) {
+                      end = picked;
+                    }
+                  },
+                  child: Text(pickerTimeFormatter.format(end))
+              ),
+            ],
+          ),
+        ),
+
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: Text("Cancel")
+          ),
+
+          if (specifier == 1)
+            TextButton(
+              onPressed: () {
+                deleteEvent(event);
+                Navigator.pop(context, null);
+              },
+              child: Text("Delete"),
+            ),
+
+          TextButton(
+            onPressed: () {
+              Navigator.pop(
+                  context,
+                  Event(
+                    title: titleController.text,
+                    description: "",
+                    startTime: start,
+                    endTime: end,
+                    rrule: "",
+                    parentId: 0,
+                    exdate: null,
+                  )
+              );
+            },
+            child: Text("Save"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
+
+
+Future<DateTime?> _showDateTimePicker(BuildContext context, DateTime? date) async {
+  DateTime? day;
+
+  await Picker(
     adapter: DateTimePickerAdapter(
       type: PickerDateTimeType.kYMDHM,
-      value: DateTime.now(),
+      value: date ?? DateTime.now(),
       minValue: DateTime(1950),
       maxValue: DateTime(2050),
     ),
     title: const Text('Select Date & Time'),
-    onConfirm: (Picker picker, List<int> value) {
-      final dateTime = (picker.adapter as DateTimePickerAdapter).value;
+    onConfirm: (Picker picker, List<int> value) async {
+      day = (picker.adapter as DateTimePickerAdapter).value;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Selected: $dateTime')));
+      ).showSnackBar(SnackBar(content: Text('Selected: $day')));
     },
   ).showModal(context);
+  return day;
+}
+
+void deleteEvent(Event event) {
+  final db_helper = DatabaseHelper();
+
+  print("Deleting");//int id = db_helper.deleteEvent(event);
 }
 
 class _CalendarHomePage extends State<CalendarHomePage> {
@@ -75,9 +222,9 @@ class _CalendarHomePage extends State<CalendarHomePage> {
 
   // Helper function to get events for a day from the map
   List<DisplayEvent> _getEventsForDay(
-    DateTime day,
-    LinkedHashMap<DateTime, List<DisplayEvent>> eventsMap,
-  ) {
+      DateTime day,
+      LinkedHashMap<DateTime, List<DisplayEvent>> eventsMap,
+      ) {
     return eventsMap[day] ?? [];
   }
 
@@ -88,16 +235,16 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   }
 
   static const AndroidNotificationDetails androidPlatformChannelSpecifics =
-      AndroidNotificationDetails(
-        'your_channel_id',
-        'your_channel_name',
-        channelDescription: 'your channel description',
-        importance: Importance.max,
-        priority: Priority.high,
-      );
+  AndroidNotificationDetails(
+    'your_channel_id',
+    'your_channel_name',
+    channelDescription: 'your channel description',
+    importance: Importance.max,
+    priority: Priority.high,
+  );
 
   static const NotificationDetails platformChannelSpecifics =
-      NotificationDetails(android: androidPlatformChannelSpecifics);
+  NotificationDetails(android: androidPlatformChannelSpecifics);
 
   Future<void> _initNotifications() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -230,8 +377,9 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                     onPressed: pickFile,
                     child: const Text('Upload'),
                   ),
-                  ElevatedButton(
-                    onPressed: () => _showDateTimePicker(context),
+                  const SizedBox(height: 8.0,),
+                  FilledButton(
+                    onPressed: () => addEditEvent(context, 0, Event(title: "", description: "", startTime: DateTime.now(), endTime: DateTime.now(), rrule: "", parentId: 0, exdate: null)),
                     child: const Text('Add Event'),
                   ),
                   const SizedBox(height: 8.0),
@@ -257,20 +405,23 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                               ),
                               child: ListTile(
                                 onTap: () async =>
-                                    await flutterLocalNotificationsPlugin.show(
-                                      0,
-                                      'These are your event details!',
-                                      '$e' +
-                                          ' starting at ${e.startTime.hour.toString()}',
-                                      platformChannelSpecifics,
-                                      payload: 'Notification Payload',
-                                    ),
+                                await flutterLocalNotificationsPlugin.show(
+                                  0,
+                                  'These are your event details!',
+                                  '$e' +
+                                      ' starting at ${e.startTime.hour.toString()}',
+                                  platformChannelSpecifics,
+                                  payload: 'Notification Payload',
+                                ),
                                 title: Text(e.title),
                                 subtitle: Text(
                                   '${e.startTime.hour.toString().padLeft(2, '0')}:${e.startTime.minute.toString().padLeft(2, '0')}'
-                                  ' - '
-                                  '${e.endTime.hour.toString().padLeft(2, '0')}:${e.endTime.minute.toString().padLeft(2, '0')}',
+                                      ' - '
+                                      '${e.endTime.hour.toString().padLeft(2, '0')}:${e.endTime.minute.toString().padLeft(2, '0')}',
                                 ),
+                                trailing: IconButton(
+                                    onPressed: () { addEditEvent(context, 1, Event(title: e.title, description: e.description, startTime: e.startTime, endTime: e.endTime, rrule: "", parentId: 0, exdate: null)); },
+                                    icon: Icon(Icons.edit)),
                               ),
                             );
                           },
