@@ -9,10 +9,6 @@ import 'chat_page.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'event.dart';
-import 'package:intl/intl.dart';
-
-final notifTimeFormatter = DateFormat('h:mm a');
-final pickerTimeFormatter = DateFormat('yyyy:MM:dd h:mm a');
 
 class Calendar extends StatelessWidget {
   const Calendar({super.key});
@@ -46,164 +42,22 @@ void pickFile() async {
   }
 }
 
-
-
-
-void addEditEvent(BuildContext context, int specifier, Event event) async {
-  DateTime start = DateTime.now();
-  DateTime end = DateTime.now();
-  String evTitle = "New Event";
-  String addOrEdit = "New Event";
-  if (specifier == 1) {
-    start = event.startTime;
-    end = event.endTime;
-    evTitle = event.title;
-    addOrEdit = "Edit Event";
-  }
-
-  Event? newEvent = await addEditEventPopOut(addOrEdit, context, event, evTitle, specifier);
-  final db_helper = DatabaseHelper();
-  int id;
-
-  if (newEvent != null) {
-    if (specifier == 1) {
-      print("Editing");//int id = db_helper.editEvent(evTitle, start, end, newEvent);
-    }
-    else {
-      id = await db_helper.insertEvent(newEvent);
-    }
-  }
-
-
-  // create popup box that has text box for title and 2 text sections
-  // that format a DateTime into readable value
-  // text box onPressed() should allow edit
-  // both time boxes should call _ShowDateTimePicker(context, start/end) respectively
-  // at end of functions should call insertEvent(event) for adding
-  // and function may need to be created for editing existing event
-  // that will take new values and old values so it knows what to replace
-  // also include a delete button if the edit button is pressed (specifier = 1)
-
-
-}
-
-Future<Event?> addEditEventPopOut(String addOrEdit, BuildContext context, Event event, String title, int specifier) async {
-  final titleController = TextEditingController(text: title);
-  String? oldTitle = title;
-  DateTime start = event.startTime;
-  DateTime end = event.endTime;
-  DateTime oldStart = start;
-
-  return showDialog<Event> (
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(addOrEdit),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: InputDecoration(labelText: "Title"),
-                ),
-
-                const SizedBox(height: 12),
-
-                Text("Start:"),
-                TextButton(
-                    onPressed: () async {
-                      final picked = await _showDateTimePicker(context, start);
-                      if (picked != null) {
-                        start = picked;
-                      }
-                    },
-                    child: Text(pickerTimeFormatter.format(start))
-                ),
-
-                Text("End:"),
-                TextButton(
-                    onPressed: () async {
-                      final picked = await _showDateTimePicker(context, start);
-                      if (picked != null) {
-                        end = picked;
-                      }
-                    },
-                    child: Text(pickerTimeFormatter.format(end))
-                ),
-              ],
-            ),
-          ),
-
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, null),
-                child: Text("Cancel")
-            ),
-
-            if (specifier == 1)
-              TextButton(
-                onPressed: () {
-                  deleteEvent(event);
-                  Navigator.pop(context, null);
-                },
-                child: Text("Delete"),
-              ),
-
-            TextButton(
-                onPressed: () {
-                  Navigator.pop(
-                      context,
-                      Event(
-                        title: titleController.text,
-                        description: "",
-                        startTime: start,
-                        endTime: end,
-                        rrule: "",
-                        parentId: 0,
-                        exdate: null,
-                      )
-                  );
-                },
-                child: Text("Save"),
-            ),
-          ],
-        );
-      },
-  );
-}
-
-
-
-
-Future<DateTime?> _showDateTimePicker(BuildContext context, DateTime? date) async {
-  DateTime? day;
-
-  await Picker(
+void _showDateTimePicker(BuildContext context) {
+  Picker(
     adapter: DateTimePickerAdapter(
       type: PickerDateTimeType.kYMDHM,
-      value: date ?? DateTime.now(),
+      value: DateTime.now(),
       minValue: DateTime(1950),
       maxValue: DateTime(2050),
     ),
     title: const Text('Select Date & Time'),
-    onConfirm: (Picker picker, List<int> value) async {
-      day = (picker.adapter as DateTimePickerAdapter).value;
+    onConfirm: (Picker picker, List<int> value) {
+      final dateTime = (picker.adapter as DateTimePickerAdapter).value;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Selected: $day')));
+      ).showSnackBar(SnackBar(content: Text('Selected: $dateTime')));
     },
   ).showModal(context);
-  return day;
-}
-
-void deleteEvent(Event event) {
-  final db_helper = DatabaseHelper();
-
-  print("Deleting");//int id = db_helper.deleteEvent(event);
 }
 
 class _CalendarHomePage extends State<CalendarHomePage> {
@@ -377,7 +231,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                     child: const Text('Upload'),
                   ),
                   ElevatedButton(
-                    onPressed: () => addEditEvent(context, 0, Event(title: "", description: "", startTime: DateTime.now(), endTime: DateTime.now(), rrule: "", parentId: 0, exdate: null)),
+                    onPressed: () => _showDateTimePicker(context),
                     child: const Text('Add Event'),
                   ),
                   const SizedBox(height: 8.0),

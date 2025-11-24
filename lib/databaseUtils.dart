@@ -53,26 +53,24 @@ class DatabaseHelper {
     )''');
 
     // Add initial hardcoded entries
+    final initialEvents = [
+      Event(
+        title: 'Meeting (Default)',
+        startTime: DateTime(kToday.year, kToday.month, kToday.day, 9, 0),
+        endTime: DateTime(kToday.year, kToday.month, kToday.day, 10, 0),
+        description: "Added by default",
+        exdate: "EXDATE:20251206T000000Z",
+        parentId: -1,
+        rrule: 'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20260201T000000Z',
+      ),
+    ];
 
-    // final initialEvents = [
-    //   Event(
-    //     title: 'Meeting (Default)',
-    //     startTime: DateTime(kToday.year, kToday.month, kToday.day, 9, 0),
-    //     endTime: DateTime(kToday.year, kToday.month, kToday.day, 10, 0),
-    //     description: "Added by default",
-    //     exdate: "EXDATE:20251206T000000Z",
-    //     parentId: -1,
-    //     rrule: 'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20260201T000000Z',
-    //   ),
-    // ];
-    //
-    // final batch = db.batch();
-    // for (var event in initialEvents) {
-    //   batch.insert(tableName, event.excludePrimaryKeyMap());
-    // }
-    // await batch.commit(noResult: true);
+    final batch = db.batch();
+    for (var event in initialEvents) {
+      batch.insert(tableName, event.excludePrimaryKeyMap());
+    }
+    await batch.commit(noResult: true);
   }
-
 
   // CRUD Operation: Insert a new event
   Future<int> insertEvent(Event event) async {
