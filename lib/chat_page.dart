@@ -291,7 +291,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ? _iCalRegex.firstMatch(message.text)
         : null;
     final bool hasICal = iCalMatch != null;
-    final String iCalContent = hasICal ? iCalMatch!.group(0)! : '';
+    final String iCalContent = hasICal ? iCalMatch.group(0)! : '';
 
     // Determine colors and alignment based on status
     final Color backgroundColor = isUser
