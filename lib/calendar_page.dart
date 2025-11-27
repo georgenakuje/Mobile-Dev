@@ -12,7 +12,7 @@ import 'event.dart';
 import 'package:intl/intl.dart';
 
 final notifTimeFormatter = DateFormat('h:mm a');
-final pickerTimeFormatter = DateFormat('yyyy:MM:dd h:mm a');
+final pickerTimeFormatter = DateFormat('dd MMM yyyy h:mm a');
 
 class Calendar extends StatelessWidget {
   const Calendar({super.key});
@@ -50,51 +50,52 @@ void pickFile() async {
 
 
 void addEditEvent(BuildContext context, int specifier, Event event) async {
-  DateTime start = DateTime.now();
-  DateTime end = DateTime.now();
   String evTitle = "New Event";
   String addOrEdit = "New Event";
   if (specifier == 1) {
-    start = event.startTime;
-    end = event.endTime;
     evTitle = event.title;
     addOrEdit = "Edit Event";
   }
 
-  Event? newEvent = await addEditEventPopOut(addOrEdit, context, event, evTitle, specifier);
+  final result = await addEditEventPopOut(addOrEdit, context, event, evTitle, specifier);
   final db_helper = DatabaseHelper();
   int id;
 
-  if (newEvent != null) {
+  if (result != null) {
+    Event? newEvent = result.event;
     if (specifier == 1) {
       print("Editing");//int id = db_helper.editEvent(evTitle, start, end, newEvent);
+      print(newEvent);
     }
-    else {
+    else if (newEvent != null) {
+      print("adding");
       id = await db_helper.insertEvent(newEvent);
     }
   }
 
 
-  // create popup box that has text box for title and 2 text sections
-  // that format a DateTime into readable value
-  // text box onPressed() should allow edit
-  // both time boxes should call _ShowDateTimePicker(context, start/end) respectively
-  // at end of functions should call insertEvent(event) for adding
-  // and function may need to be created for editing existing event
-  // that will take new values and old values so it knows what to replace
-  // also include a delete button if the edit button is pressed (specifier = 1)
+  // UPDATE VISUALS AFTER ALL CONFIRMS
+  // add print statements through the flow to make sure the functions for
+  // delete, add, edit will be called properly when implemented
 
 
 }
 
-Future<Event?> addEditEventPopOut(String addOrEdit, BuildContext context, Event event, String title, int specifier) async {
+Future<({Event? event, String freq})?> addEditEventPopOut(String addOrEdit, BuildContext context, Event event, String title, int specifier) async {
   final titleController = TextEditingController(text: title);
   String? oldTitle = title;
   DateTime start = event.startTime;
   DateTime end = event.endTime;
-  DateTime oldStart = start;
 
-  return showDialog<Event> (
+  String repeatRule = "Repeat";
+  String repeatTitle = "Event Repetition";
+  List<String> repeatOptions = ["Never","Daily","Weekly","Bi-Weekly","Monthly","Yearly"];
+  if (specifier == 1) {
+    repeatOptions = ["This Event", "All Events"];
+    repeatTitle = "Delete Amount";
+  }
+
+  return showDialog<({Event? event, String freq})> (
     context: context,
     barrierDismissible: false,
     builder: (context) {
@@ -128,12 +129,28 @@ Future<Event?> addEditEventPopOut(String addOrEdit, BuildContext context, Event 
               Text("End:"),
               TextButton(
                   onPressed: () async {
-                    final picked = await _showDateTimePicker(context, start);
+                    final picked = await _showDateTimePicker(context, end);
                     if (picked != null) {
                       end = picked;
                     }
                   },
                   child: Text(pickerTimeFormatter.format(end))
+              ),
+
+              TextButton(
+                onPressed: () async {
+                  await Picker(
+                    adapter: PickerDataAdapter<String>(pickerData: repeatOptions),
+                    hideHeader: false,
+                    title: Text(repeatTitle),
+                    height: 250,
+                    itemExtent: 40,
+                    onConfirm: (Picker picker, List value) {
+                      repeatRule = picker.getSelectedValues()[0];
+                    },
+                  ).showModal(context);
+                },
+                child: Text(repeatRule),
               ),
             ],
           ),
@@ -148,7 +165,7 @@ Future<Event?> addEditEventPopOut(String addOrEdit, BuildContext context, Event 
           if (specifier == 1)
             TextButton(
               onPressed: () {
-                deleteEvent(event);
+                deleteEvent(event, repeatRule);
                 Navigator.pop(context, null);
               },
               child: Text("Delete"),
@@ -157,8 +174,7 @@ Future<Event?> addEditEventPopOut(String addOrEdit, BuildContext context, Event 
           TextButton(
             onPressed: () {
               Navigator.pop(
-                  context,
-                  Event(
+                  context, (event: Event(
                     title: titleController.text,
                     description: "",
                     startTime: start,
@@ -166,7 +182,8 @@ Future<Event?> addEditEventPopOut(String addOrEdit, BuildContext context, Event 
                     rrule: "",
                     parentId: 0,
                     exdate: null,
-                  )
+                  ), freq: repeatRule
+                )
               );
             },
             child: Text("Save"),
@@ -201,9 +218,10 @@ Future<DateTime?> _showDateTimePicker(BuildContext context, DateTime? date) asyn
   return day;
 }
 
-void deleteEvent(Event event) {
+void deleteEvent(Event event, String freq) {
   final db_helper = DatabaseHelper();
 
+  // freq is either "Current" or "All" for how many to delete
   print("Deleting");//int id = db_helper.deleteEvent(event);
 }
 
