@@ -9,6 +9,7 @@ import 'chat_page.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'event.dart';
+import 'package:intl/intl.dart';
 
 class Calendar extends StatelessWidget {
   const Calendar({super.key});
@@ -75,9 +76,9 @@ class _CalendarHomePage extends State<CalendarHomePage> {
 
   // Helper function to get events for a day from the map
   List<DisplayEvent> _getEventsForDay(
-    DateTime day,
-    LinkedHashMap<DateTime, List<DisplayEvent>> eventsMap,
-  ) {
+      DateTime day,
+      LinkedHashMap<DateTime, List<DisplayEvent>> eventsMap,
+      ) {
     return eventsMap[day] ?? [];
   }
 
@@ -88,16 +89,16 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   }
 
   static const AndroidNotificationDetails androidPlatformChannelSpecifics =
-      AndroidNotificationDetails(
-        'your_channel_id',
-        'your_channel_name',
-        channelDescription: 'your channel description',
-        importance: Importance.max,
-        priority: Priority.high,
-      );
+  AndroidNotificationDetails(
+    'your_channel_id',
+    'your_channel_name',
+    channelDescription: 'your channel description',
+    importance: Importance.max,
+    priority: Priority.high,
+  );
 
   static const NotificationDetails platformChannelSpecifics =
-      NotificationDetails(android: androidPlatformChannelSpecifics);
+  NotificationDetails(android: androidPlatformChannelSpecifics);
 
   Future<void> _initNotifications() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -108,6 +109,31 @@ class _CalendarHomePage extends State<CalendarHomePage> {
         debugPrint('Tapped payload: ${r.payload}');
       },
     );
+  }
+
+  Future<void> _addEventFromIcs(String icsText) async {
+    final events = parseIcsToDisplayEvents(icsText);
+    final dbHelper = DatabaseHelper();
+
+    for (final d in events) {
+      final event = Event(
+        id: null,
+        title: d.title,
+        description: d.description,
+        startTime: d.startTime,
+        endTime: d.endTime,
+        rrule: null,
+        parentId: d.parentId,
+        exdate: null,
+      );
+      await dbHelper.insertEvent(event);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Event Added!')),
+      );
+    }
   }
 
   @override
@@ -141,14 +167,23 @@ class _CalendarHomePage extends State<CalendarHomePage> {
           child: Builder(
             builder: (drawerContext) => NavigationRail(
               selectedIndex: _selectedIndex,
-              onDestinationSelected: (int index) {
+              onDestinationSelected: (int index) async {
                 setState(() => _selectedIndex = index);
                 Navigator.pop(drawerContext);
 
                 if (index == 1) {
-                  Navigator.push(
+                  await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ChatApp()),
+                    MaterialPageRoute(
+                      builder: (context) => ChatScreen(
+                            (icsText) async {
+                          await _addEventFromIcs(icsText);
+                          setState(() {
+                            _eventsFuture = getEventsFromDatabase();
+                          });
+                        },
+                      ),
+                    ),
                   );
                 }
               },
@@ -257,19 +292,19 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                               ),
                               child: ListTile(
                                 onTap: () async =>
-                                    await flutterLocalNotificationsPlugin.show(
-                                      0,
-                                      'These are your event details!',
-                                      '$e' +
-                                          ' starting at ${e.startTime.hour.toString()}',
-                                      platformChannelSpecifics,
-                                      payload: 'Notification Payload',
-                                    ),
+                                await flutterLocalNotificationsPlugin.show(
+                                  0,
+                                  'These are your event details!',
+                                  '$e' +
+                                      ' starting at ${e.startTime.hour.toString()}',
+                                  platformChannelSpecifics,
+                                  payload: 'Notification Payload',
+                                ),
                                 title: Text(e.title),
                                 subtitle: Text(
                                   '${e.startTime.hour.toString().padLeft(2, '0')}:${e.startTime.minute.toString().padLeft(2, '0')}'
-                                  ' - '
-                                  '${e.endTime.hour.toString().padLeft(2, '0')}:${e.endTime.minute.toString().padLeft(2, '0')}',
+                                      ' - '
+                                      '${e.endTime.hour.toString().padLeft(2, '0')}:${e.endTime.minute.toString().padLeft(2, '0')}',
                                 ),
                               ),
                             );
@@ -287,5 +322,68 @@ class _CalendarHomePage extends State<CalendarHomePage> {
         },
       ),
     );
+  }
+}
+
+List<DisplayEvent> parseIcsToDisplayEvents(String icsText) {
+  final events = <DisplayEvent>[];
+  final blocks = icsText.split('BEGIN:VEVENT');
+  for (final block in blocks) {
+    if (!block.contains('END:VEVENT')) continue;
+    String? title;
+    DateTime? start;
+    DateTime? end;
+    final lines =
+    block.split(RegExp(r'\r?\n')).map((l) => l.trim()).toList();
+    for (final line in lines) {
+      if (line.startsWith('SUMMARY:')) {
+        title = line.substring('SUMMARY:'.length).trim();
+      } else if (line.startsWith('DTSTART')) {
+        start = _parseIcsDate(line);
+      } else if (line.startsWith('DTEND')) {
+        end = _parseIcsDate(line);
+      }
+    }
+    if (title != null && start != null && end != null) {
+      events.add(
+        DisplayEvent(
+          id: null,
+          title: title,
+          description: '',    // empty description is fine
+          startTime: start,
+          endTime: end,
+          parentId: -1,       // -1 is your “new event” sentinel in the DB
+        ),
+      );
+    }
+  }
+  return events;
+}
+
+DateTime _parseIcsDate(String line) {
+  final parts = line.split(':');
+  final value = parts.last.trim();
+  if (value.endsWith('Z')) {
+    return DateTime.parse(value).toLocal();
+  }
+  if (value.length == 15) {
+    return DateTime.parse(
+      '${value.substring(0, 4)}-'
+          '${value.substring(4, 6)}-'
+          '${value.substring(6, 8)} '
+          '${value.substring(9, 11)}:'
+          '${value.substring(11, 13)}:'
+          '${value.substring(13, 15)}',
+    );
+  } else if (value.length == 13) {
+    return DateTime.parse(
+      '${value.substring(0, 4)}-'
+          '${value.substring(4, 6)}-'
+          '${value.substring(6, 8)} '
+          '${value.substring(9, 11)}:'
+          '${value.substring(11, 13)}:00',
+    );
+  } else {
+    return DateTime.parse(value);
   }
 }
