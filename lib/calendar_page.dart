@@ -11,6 +11,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'event.dart';
 import 'package:intl/intl.dart';
 
+final notifTimeFormatter = DateFormat('h:mm a');
+final pickerTimeFormatter = DateFormat('dd MMM yyyy h:mm a');
+
 class Calendar extends StatelessWidget {
   const Calendar({super.key});
 
@@ -43,22 +46,200 @@ void pickFile() async {
   }
 }
 
-void _showDateTimePicker(BuildContext context) {
-  Picker(
+
+
+
+void addEditEvent(BuildContext context, int specifier, Event event) async {
+  String evTitle = "New Event";
+  String addOrEdit = "New Event";
+  if (specifier == 1) {
+    evTitle = event.title;
+    addOrEdit = "Edit Event";
+  }
+
+  final result = await addEditEventPopOut(addOrEdit, context, event, evTitle, specifier);
+  final db_helper = DatabaseHelper();
+  int id;
+
+  if (result != null) {
+    Event? newEvent = result.event;
+    if (specifier == 1) {
+      //int id = db_helper.editEvent(evTitle, start, end, newEvent);
+      print("Editing");
+      //updateCalendar()
+    }
+    else if (newEvent != null) {
+      id = await db_helper.insertEvent(newEvent);
+      print("adding");
+      print(id);
+      print(newEvent.title);
+      //updateCalendar();
+
+    }
+  }
+
+
+  // UPDATE VISUALS AFTER ALL CONFIRMS
+  // add print statements through the flow to make sure the functions for
+  // delete, add, edit will be called properly when implemented
+
+
+}
+
+Future<({Event? event, String freq})?> addEditEventPopOut(String addOrEdit, BuildContext context, Event event, String title, int specifier) async {
+  final titleController = TextEditingController(text: title);
+  String? oldTitle = title;
+  DateTime start = event.startTime;
+  DateTime end = event.endTime;
+
+  String repeatRule = "Repeat";
+  String repeatTitle = "Event Repetition";
+  List<String> repeatOptions = ["Never","Daily","Weekly","Bi-Weekly","Monthly","Yearly"];
+  if (specifier == 1) {
+    repeatOptions = ["This Event", "All Events"];
+    repeatTitle = "Delete Amount";
+  }
+
+  return showDialog<({Event? event, String freq})> (
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            actionsAlignment: MainAxisAlignment.center,
+            title: Text(addOrEdit),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(labelText: "Title"),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Text("Start:"),
+                  TextButton(
+                      onPressed: () async {
+                        final picked = await _showDateTimePicker(context,
+                            start);
+                        if (picked != null) {
+                          setState(() {
+                            start = picked;
+                          });
+                        }
+                      },
+                      child: Text(pickerTimeFormatter.format(start))
+                  ),
+
+                  Text("End:"),
+                  TextButton(
+                      onPressed: () async {
+                        final picked = await _showDateTimePicker(context, end);
+                        if (picked != null) {
+                          setState(() {
+                            end = picked;
+                          });
+                        }
+                      },
+                      child: Text(pickerTimeFormatter.format(end))
+                  ),
+
+                  TextButton(
+                    onPressed: () async {
+                      await Picker(
+                        adapter: PickerDataAdapter<String>(
+                            pickerData: repeatOptions),
+                        hideHeader: false,
+                        title: Text(repeatTitle),
+                        height: 250,
+                        itemExtent: 40,
+                        onConfirm: (Picker picker, List value) {
+                          setState( () {
+                            repeatRule = picker.getSelectedValues()[0];
+                          });
+                        },
+                      ).showModal(context);
+                    },
+                    child: Text(repeatRule),
+                  ),
+                ],
+              ),
+            ),
+
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: Text("Cancel")
+              ),
+
+              if (specifier == 1)
+                TextButton(
+                  onPressed: () {
+                    deleteEvent(event, repeatRule);
+                    Navigator.pop(context, null);
+                  },
+                  child: Text("Delete"),
+                ),
+
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(
+                      context, (event: Event(
+                    title: titleController.text,
+                    description: "",
+                    startTime: start,
+                    endTime: end,
+                    rrule: "",
+                    parentId: 0,
+                    exdate: null,
+                  ), freq: repeatRule
+                  )
+                  );
+                },
+                child: Text("Save"),
+              ),
+            ],
+          );
+        }
+      );
+    },
+  );
+}
+
+
+
+
+Future<DateTime?> _showDateTimePicker(BuildContext context, DateTime? date) async {
+  DateTime? day;
+
+  await Picker(
     adapter: DateTimePickerAdapter(
       type: PickerDateTimeType.kYMDHM,
-      value: DateTime.now(),
+      value: date ?? DateTime.now(),
       minValue: DateTime(1950),
       maxValue: DateTime(2050),
     ),
     title: const Text('Select Date & Time'),
-    onConfirm: (Picker picker, List<int> value) {
-      final dateTime = (picker.adapter as DateTimePickerAdapter).value;
+    onConfirm: (Picker picker, List<int> value) async {
+      day = (picker.adapter as DateTimePickerAdapter).value;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Selected: $dateTime')));
+      ).showSnackBar(SnackBar(content: Text('Selected: $day')));
     },
   ).showModal(context);
+  return day;
+}
+
+void deleteEvent(Event event, String freq) {
+  final db_helper = DatabaseHelper();
+
+  // freq is either "Current" or "All" for how many to delete
+  print("Deleting");//int id = db_helper.deleteEvent(event);
 }
 
 class _CalendarHomePage extends State<CalendarHomePage> {
@@ -265,8 +446,9 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                     onPressed: pickFile,
                     child: const Text('Upload'),
                   ),
-                  ElevatedButton(
-                    onPressed: () => _showDateTimePicker(context),
+                  const SizedBox(height: 8.0,),
+                  FilledButton(
+                    onPressed: () => addEditEvent(context, 0, Event(title: "", description: "", startTime: DateTime.now(), endTime: DateTime.now(), rrule: "", parentId: 0, exdate: null)),
                     child: const Text('Add Event'),
                   ),
                   const SizedBox(height: 8.0),
@@ -306,6 +488,9 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                                       ' - '
                                       '${e.endTime.hour.toString().padLeft(2, '0')}:${e.endTime.minute.toString().padLeft(2, '0')}',
                                 ),
+                                trailing: IconButton(
+                                    onPressed: () { addEditEvent(context, 1, Event(title: e.title, description: e.description, startTime: e.startTime, endTime: e.endTime, rrule: "", parentId: 0, exdate: null)); },
+                                    icon: Icon(Icons.edit)),
                               ),
                             );
                           },
