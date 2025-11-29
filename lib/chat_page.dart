@@ -48,7 +48,11 @@ class ChatApp extends ConsumerWidget {
     return modelAsyncValue.when(
       // === State 1: Data Loaded (Model Initialized) ===
       data: (model) {
-        return const ChatScreen();
+        return ChatScreen(
+              (icsText) async {
+            // no-op when ChatApp is used standalone
+          },
+        );
       },
       // === State 2: Loading ===
       loading: () {
@@ -85,7 +89,9 @@ class ChatApp extends ConsumerWidget {
 }
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key});
+  final Future<void> Function(String icsText) onIcsDetected;
+
+  const ChatScreen(this.onIcsDetected, {super.key});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -147,6 +153,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Call the service
     final llmResponse = await chatService.sendMessage(message);
 
+    String? detectedIcs; // will hold ICS block if found
+
     // Remove the loading indicator and add the actual response/error
     setState(() {
       // Safety check: ensure the last message is still the loading indicator
@@ -155,8 +163,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       if (llmResponse.isSuccess && llmResponse.content != null) {
+        final text = llmResponse.content!;
+
         // Add the successful response
-        _messages.add(Message.llm(llmResponse.content!));
+        _messages.add(Message.llm(text));
+
+        final match = _iCalRegex.firstMatch(text);
+        if (match != null) {
+          detectedIcs = match.group(0);
+        }
       } else {
         // Add an error message
         _messages.add(
@@ -164,6 +179,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
       }
     });
+
+    if (detectedIcs != null) {
+      await widget.onIcsDetected(detectedIcs!);
+    }
   }
 
   Future<void> _importAndSummarizeIcs() async {
@@ -291,7 +310,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ? _iCalRegex.firstMatch(message.text)
         : null;
     final bool hasICal = iCalMatch != null;
-    final String iCalContent = hasICal ? iCalMatch!.group(0)! : '';
+    final String iCalContent = hasICal ? iCalMatch.group(0)! : '';
 
     // Determine colors and alignment based on status
     final Color backgroundColor = isUser
@@ -325,37 +344,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 child: message.isLoading
                     ? const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Typing...',
-                            style: TextStyle(fontStyle: FontStyle.italic),
-                          ),
-                        ],
-                      )
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Typing...',
+                      style: TextStyle(fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                )
                     : isLLM
                     ? MarkdownBody(
-                        data: message
-                            .text, // The LLM response containing markdown
-                        shrinkWrap:
-                            true, // Important to prevent unbounded height errors
-                      )
+                  data: message
+                      .text, // The LLM response containing markdown
+                  shrinkWrap:
+                  true, // Important to prevent unbounded height errors
+                )
                     : Text(
-                        message.text,
-                        style: TextStyle(
-                          color: isUser
-                              ? Colors.black87
-                              : (message.isError
-                                    ? Colors.red.shade900
-                                    : Colors.black),
-                        ),
-                      ),
+                  message.text,
+                  style: TextStyle(
+                    color: isUser
+                        ? Colors.black87
+                        : (message.isError
+                        ? Colors.red.shade900
+                        : Colors.black),
+                  ),
+                ),
               ),
               if (isLLM && hasICal && !isUser)
                 Padding(
