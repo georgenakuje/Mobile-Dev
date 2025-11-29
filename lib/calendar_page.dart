@@ -64,12 +64,17 @@ void addEditEvent(BuildContext context, int specifier, Event event) async {
   if (result != null) {
     Event? newEvent = result.event;
     if (specifier == 1) {
-      print("Editing");//int id = db_helper.editEvent(evTitle, start, end, newEvent);
-      print(newEvent);
+      //int id = db_helper.editEvent(evTitle, start, end, newEvent);
+      print("Editing");
+      //updateCalendar()
     }
     else if (newEvent != null) {
-      print("adding");
       id = await db_helper.insertEvent(newEvent);
+      print("adding");
+      print(id);
+      print(newEvent.title);
+      //updateCalendar();
+
     }
   }
 
@@ -99,82 +104,92 @@ Future<({Event? event, String freq})?> addEditEventPopOut(String addOrEdit, Buil
     context: context,
     barrierDismissible: false,
     builder: (context) {
-      return AlertDialog(
-        actionsAlignment: MainAxisAlignment.center,
-        title: Text(addOrEdit),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(labelText: "Title"),
-              ),
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            actionsAlignment: MainAxisAlignment.center,
+            title: Text(addOrEdit),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(labelText: "Title"),
+                  ),
 
-              const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-              Text("Start:"),
-              TextButton(
-                  onPressed: () async {
-                    final picked = await _showDateTimePicker(context, start);
-                    if (picked != null) {
-                      start = picked;
-                    }
-                  },
-                  child: Text(pickerTimeFormatter.format(start))
-              ),
+                  Text("Start:"),
+                  TextButton(
+                      onPressed: () async {
+                        final picked = await _showDateTimePicker(context,
+                            start);
+                        if (picked != null) {
+                          setState(() {
+                            start = picked;
+                          });
+                        }
+                      },
+                      child: Text(pickerTimeFormatter.format(start))
+                  ),
 
-              Text("End:"),
-              TextButton(
-                  onPressed: () async {
-                    final picked = await _showDateTimePicker(context, end);
-                    if (picked != null) {
-                      end = picked;
-                    }
-                  },
-                  child: Text(pickerTimeFormatter.format(end))
-              ),
+                  Text("End:"),
+                  TextButton(
+                      onPressed: () async {
+                        final picked = await _showDateTimePicker(context, end);
+                        if (picked != null) {
+                          setState(() {
+                            end = picked;
+                          });
+                        }
+                      },
+                      child: Text(pickerTimeFormatter.format(end))
+                  ),
 
-              TextButton(
-                onPressed: () async {
-                  await Picker(
-                    adapter: PickerDataAdapter<String>(pickerData: repeatOptions),
-                    hideHeader: false,
-                    title: Text(repeatTitle),
-                    height: 250,
-                    itemExtent: 40,
-                    onConfirm: (Picker picker, List value) {
-                      repeatRule = picker.getSelectedValues()[0];
+                  TextButton(
+                    onPressed: () async {
+                      await Picker(
+                        adapter: PickerDataAdapter<String>(
+                            pickerData: repeatOptions),
+                        hideHeader: false,
+                        title: Text(repeatTitle),
+                        height: 250,
+                        itemExtent: 40,
+                        onConfirm: (Picker picker, List value) {
+                          setState( () {
+                            repeatRule = picker.getSelectedValues()[0];
+                          });
+                        },
+                      ).showModal(context);
                     },
-                  ).showModal(context);
-                },
-                child: Text(repeatRule),
+                    child: Text(repeatRule),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, null),
-              child: Text("Cancel")
-          ),
-
-          if (specifier == 1)
-            TextButton(
-              onPressed: () {
-                deleteEvent(event, repeatRule);
-                Navigator.pop(context, null);
-              },
-              child: Text("Delete"),
             ),
 
-          TextButton(
-            onPressed: () {
-              Navigator.pop(
-                  context, (event: Event(
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: Text("Cancel")
+              ),
+
+              if (specifier == 1)
+                TextButton(
+                  onPressed: () {
+                    deleteEvent(event, repeatRule);
+                    Navigator.pop(context, null);
+                  },
+                  child: Text("Delete"),
+                ),
+
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(
+                      context, (event: Event(
                     title: titleController.text,
                     description: "",
                     startTime: start,
@@ -183,12 +198,14 @@ Future<({Event? event, String freq})?> addEditEventPopOut(String addOrEdit, Buil
                     parentId: 0,
                     exdate: null,
                   ), freq: repeatRule
-                )
-              );
-            },
-            child: Text("Save"),
-          ),
-        ],
+                  )
+                  );
+                },
+                child: Text("Save"),
+              ),
+            ],
+          );
+        }
       );
     },
   );
