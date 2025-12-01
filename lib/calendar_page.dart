@@ -890,7 +890,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                                     await flutterLocalNotificationsPlugin.show(
                                       0,
                                       'These are your event details!',
-                                      '$e.title' + ' starting at ${e.startTime.hour.toString()} and ending at ${e.endTime.hour.toString()}',
+                                      '${e.title}' + ' starting at ${e.startTime.hour.toString()} and ending at ${e.endTime.hour.toString()}',
                                       platformChannelSpecifics,
                                       payload: 'Notification Payload',
                                     ),
