@@ -80,17 +80,7 @@ Future<void> saveIcsToDatabase(String icsText) async {
   final events = parseIcsToDisplayEvents(icsText);
   final dbHelper = DatabaseHelper();
 
-  for (final d in events) {
-    final event = Event(
-      id: null,
-      title: d.title,
-      description: d.description,
-      startTime: d.startTime,
-      endTime: d.endTime,
-      rrule: "",
-      parentId: d.parentId,
-      exdate: "",
-    );
-    await dbHelper.insertEvent(event);
+  for (final e in events) {
+    await dbHelper.insertEvent(e);
   }
 }

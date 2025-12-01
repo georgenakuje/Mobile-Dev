@@ -687,14 +687,17 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   }
 }
 
-List<DisplayEvent> parseIcsToDisplayEvents(String icsText) {
-  final events = <DisplayEvent>[];
+List<Event> parseIcsToDisplayEvents(String icsText) {
+  final events = <Event>[];
   final blocks = icsText.split('BEGIN:VEVENT');
   for (final block in blocks) {
     if (!block.contains('END:VEVENT')) continue;
     String? title;
     DateTime? start;
     DateTime? end;
+    String rrule = "";
+    List<String> exdates = [];
+    String exDates = "";
     final lines = block.split(RegExp(r'\r?\n')).map((l) => l.trim()).toList();
     for (final line in lines) {
       if (line.startsWith('SUMMARY:')) {
@@ -703,17 +706,37 @@ List<DisplayEvent> parseIcsToDisplayEvents(String icsText) {
         start = _parseIcsDate(line);
       } else if (line.startsWith('DTEND')) {
         end = _parseIcsDate(line);
+      } else if (line.startsWith('RRULE')) {
+        rrule = line.trim();
+      } else if (line.startsWith("EXDATE")) {
+
+        final raw = line.substring(line.indexOf(":") + 1).trim();
+        final parts = raw.split(",");
+
+        for (final p in parts) {
+          final value = p.trim();
+          if (value.isNotEmpty && !exdates.contains(value)) {
+            exdates.add(value);
+          }
+        }
       }
     }
+
+    if (exdates.isNotEmpty) {
+      exDates = "EXDATE:${exdates.join(",")}";
+    }
+
     if (title != null && start != null && end != null) {
       events.add(
-        DisplayEvent(
+        Event(
           id: null,
           title: title,
           description: '', // empty description is fine
           startTime: start,
           endTime: end,
+          rrule: rrule,
           parentId: -1, // -1 is your “new event” sentinel in the DB
+          exdate: exDates,
         ),
       );
     }
