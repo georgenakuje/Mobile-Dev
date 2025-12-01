@@ -15,7 +15,7 @@ import './services/notification_service.dart';
 
 final notifTimeFormatter = DateFormat('h:mm a');
 final pickerDateTimeFormatter = DateFormat('dd MMM yyyy h:mm a');
-final pickerDateFormatter = DateFormat('dd MM yyyy');
+final pickerDateFormatter = DateFormat('dd MMM yyyy');
 
 class Calendar extends StatefulWidget {
   const Calendar({super.key});
