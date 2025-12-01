@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_picker_plus/picker.dart';
 import 'databaseUtils.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:file_picker/file_picker.dart';
 import 'chat_page.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -15,39 +14,65 @@ import 'rrule_generator_helper.dart';
 import './services/notification_service.dart';
 
 final notifTimeFormatter = DateFormat('h:mm a');
-final pickerTimeFormatter = DateFormat('dd MMM yyyy h:mm a');
+final pickerDateTimeFormatter = DateFormat('dd MMM yyyy h:mm a');
+final pickerDateFormatter = DateFormat('dd MM yyyy');
 
-class Calendar extends StatelessWidget {
+class Calendar extends StatefulWidget {
   const Calendar({super.key});
+
+  @override
+  State<Calendar> createState() => _CalendarState();
+// Widget build(BuildContext context) {
+//   return MaterialApp(
+//     title: 'Calendar App',
+//     theme: theme,
+//     // MyHomePage is wrapped in a FutureBuilder internally now.
+//     home: const CalendarHomePage(title: ''),
+//   );
+// }
+}
+
+class _CalendarState extends State<Calendar> {
+  bool darkMode = false;
+
+  ThemeData theme = ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: const Color(0xFFB8C4FF),
+    ),
+  );
+
+  void toggleTheme() {
+    setState(() {
+      darkMode = !darkMode;
+      theme = darkMode ? ThemeData.dark() : ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFB8C4FF),
+        ),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Calendar App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB8C4FF)),
+      theme: theme,
+      home: CalendarHomePage(
+        title: '',
+        toggleTheme: toggleTheme,
       ),
-      // MyHomePage is wrapped in a FutureBuilder internally now.
-      home: const CalendarHomePage(title: ''),
     );
   }
 }
 
 class CalendarHomePage extends StatefulWidget {
-  const CalendarHomePage({super.key, required this.title});
+  const CalendarHomePage({super.key, required this.title, required this.toggleTheme});
   final String title;
+  final VoidCallback toggleTheme;
 
   @override
   State<CalendarHomePage> createState() => _CalendarHomePage();
 }
 
-void pickFile() async {
-  FilePickerResult? result = await FilePicker.platform.pickFiles();
-
-  if (result != null) {
-    File file = File(result.files.single.path!);
-  }
-}
 
 void addEditEvent(
   BuildContext context,
@@ -83,8 +108,6 @@ void addEditEvent(
     } else if (newEvent != null) {
       id = await db_helper.insertEvent(newEvent);
       print("adding");
-      print(id);
-      print(newEvent.title);
       onUpdate();
     }
   }
@@ -106,6 +129,14 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
   String? repeatRule = "Never";
   String repeatTitle = "Event Repetition";
   String repeatDisplay = "Repeat";
+  DateTime repeatEndDate = DateTime(
+    2050,
+    event.startTime.month,
+    event.startTime.day,
+    0,
+    0,
+    0,
+  );
 
   List<String> repeatOptions = [
     "Never",
@@ -144,37 +175,147 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                 children: [
                   TextField(
                     controller: titleController,
-                    decoration: InputDecoration(labelText: "Title"),
+                    decoration: InputDecoration(labelText: "Title", labelStyle: TextStyle(fontSize: 21)),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 15),
 
-                  Text("Start:"),
-                  TextButton(
-                    onPressed: () async {
-                      final picked = await _showDateTimePicker(context, start);
-                      if (picked != null) {
-                        setState(() {
-                          start = picked;
-                        });
-                      }
-                    },
-                    child: Text(pickerTimeFormatter.format(start)),
+                  Text("Start:", style: TextStyle(fontSize: 15)),
+                  const SizedBox(height: 7),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                            width: 3,
+                          ),
+                          borderRadius: BorderRadius.circular(90), // optional
+                        ),
+                        child: SizedBox(
+                          height: 35,
+                          child: TextButton(
+                            onPressed: () async {
+                              final picked = await _showDatePicker(context, start);
+                              if (picked != null) {
+                                setState(() {
+                                  start = DateTime(
+                                    picked.year,
+                                    picked.month,
+                                    picked.day,
+                                    start.hour,
+                                    start.minute,
+                                  );
+                                });
+                              }
+                            },
+                            child: Text(pickerDateFormatter.format(start)),
+                          ),
+                        ),
+                      ),
+
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                            width: 3,
+                          ),
+                          borderRadius: BorderRadius.circular(90), // optional
+                        ),
+                        child: SizedBox(
+                          height: 35,
+                          child: TextButton(
+                            onPressed: () async {
+                              final picked = await _showTimePicker(context, start);
+                              if (picked != null) {
+                                setState(() {
+                                  start = DateTime(
+                                    start.year,
+                                    start.month,
+                                    start.day,
+                                    picked.hour,
+                                    picked.minute,
+                                  );
+                                });
+                              }
+                            },
+                            child: Text(notifTimeFormatter.format(start)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
-                  Text("End:"),
-                  TextButton(
-                    onPressed: () async {
-                      final picked = await _showDateTimePicker(context, end);
-                      if (picked != null) {
-                        setState(() {
-                          end = picked;
-                        });
-                      }
-                    },
-                    child: Text(pickerTimeFormatter.format(end)),
+                  const SizedBox(height: 20),
+                  Text("End:", style: TextStyle(fontSize: 15)),
+                  const SizedBox(height: 7),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                            width: 3,
+                          ),
+                          borderRadius: BorderRadius.circular(90), // optional
+                        ),
+                        child: SizedBox(
+                          height: 35,
+                          child: TextButton(
+                            onPressed: () async {
+                              final picked = await _showDatePicker(context, end);
+                              if (picked != null) {
+                                setState(() {
+                                  end = DateTime(
+                                    picked.year,
+                                    picked.month,
+                                    picked.day,
+                                    end.hour,
+                                    end.minute,
+                                  );
+                                });
+                              }
+                            },
+                            child: Text(pickerDateFormatter.format(end)),
+                          ),
+                        ),
+                      ),
+
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey,
+                            width: 3,
+                          ),
+                          borderRadius: BorderRadius.circular(90), // optional
+                        ),
+                        child: SizedBox(
+                          height: 35.0,
+                          child: TextButton(
+                            onPressed: () async {
+                              final picked = await _showTimePicker(context, end);
+                              if (picked != null) {
+                                setState(() {
+                                  end = DateTime(
+                                    end.year,
+                                    end.month,
+                                    end.day,
+                                    picked.hour,
+                                    picked.minute,
+                                  );
+                                });
+                              }
+                            },
+                            child: Text(notifTimeFormatter.format(end)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
+                  const SizedBox(height: 30),
                   // REPEAT RULE BUTTON
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(elevation: 5),
@@ -205,10 +346,47 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                     child: Text(currentRepeatDisplay),
                   ),
 
+                  const SizedBox(height: 5),
                   const Text(
                     "Repeat Options",
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(fontSize: 12),
                   ),
+
+                  if (repeatRule != "Never" && specifier == 0) ...[
+                    const SizedBox(height: 20),
+                    const Text("Repeat End Date", style: TextStyle(fontSize: 15)),
+                    const SizedBox(height: 7),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.grey,
+                          width: 3,
+                        ),
+                        borderRadius: BorderRadius.circular(90), // optional
+                      ),
+                      child: SizedBox(
+                        height: 35.0,
+                        child: TextButton(
+                          onPressed: () async {
+                            final picked = await _showDatePicker(context, repeatEndDate);
+                            if (picked != null) {
+                              setState(() {
+                                repeatEndDate = DateTime(
+                                  picked.year,
+                                  picked.month,
+                                  picked.day,
+                                  23,
+                                  59,
+                                  59,
+                                );
+                              });
+                            }
+                          },
+                          child: Text(pickerDateFormatter.format(repeatEndDate)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -263,7 +441,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                           // Logic for New Event
                           repeatRule = generateIcsRrule(
                             option: repeatRule!,
-                            endDate: end,
+                            endDate: repeatEndDate,
                           );
                         }
 
@@ -290,15 +468,39 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
   );
 }
 
-Future<DateTime?> _showDateTimePicker(
-  BuildContext context,
-  DateTime? date,
-) async {
+Future<DateTime?> _showDatePicker(
+    BuildContext context,
+    DateTime? date,
+    ) async {
   DateTime? day;
 
   await Picker(
     adapter: DateTimePickerAdapter(
-      type: PickerDateTimeType.kYMDHM,
+      type: PickerDateTimeType.kYMD,
+      value: date ?? DateTime.now(),
+      minValue: DateTime(1950),
+      maxValue: DateTime(2050),
+    ),
+    title: const Text('Select Date & Time'),
+    onConfirm: (Picker picker, List<int> value) async {
+      day = (picker.adapter as DateTimePickerAdapter).value;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Selected: $day')));
+    },
+  ).showModal(context);
+  return day;
+}
+
+Future<DateTime?> _showTimePicker(
+    BuildContext context,
+    DateTime? date,
+    ) async {
+  DateTime? day;
+
+  await Picker(
+    adapter: DateTimePickerAdapter(
+      type: PickerDateTimeType.kHM,
       value: date ?? DateTime.now(),
       minValue: DateTime(1950),
       maxValue: DateTime(2050),
@@ -359,6 +561,9 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   DateTime _focusedDay = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
   int _selectedIndex = 0;
+  Color dailyEventBorderColour = Colors.black;
+  Color calendarDots = Colors.deepOrangeAccent;
+  Color sideBarTextColour = Colors.black;
 
   late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
   // Initialize with an empty value listener until events are loaded
@@ -417,6 +622,26 @@ class _CalendarHomePage extends State<CalendarHomePage> {
       });
       _selectedEvents.value = [];
     });
+  }
+
+  void changeEventBorderColour() {
+    if (dailyEventBorderColour == Colors.black) {
+      dailyEventBorderColour = Colors.white70;
+    } else {
+      dailyEventBorderColour = Colors.black;
+    }
+
+    if (calendarDots == Colors.deepOrangeAccent) {
+      calendarDots = Colors.yellow;
+    } else {
+      calendarDots = Colors.deepOrangeAccent;
+    }
+
+    if (sideBarTextColour == Colors.black) {
+      sideBarTextColour = Colors.white;
+    } else {
+      sideBarTextColour = Colors.black;
+    }
   }
 
   Future<void> _requestNotificationPermission() async {
@@ -493,9 +718,9 @@ class _CalendarHomePage extends State<CalendarHomePage> {
         child: SafeArea(
           child: Builder(
             builder: (drawerContext) => NavigationRail(
-              selectedIndex: _selectedIndex,
+              selectedIndex: null,
               onDestinationSelected: (int index) async {
-                setState(() => _selectedIndex = index);
+                //setState(() => _selectedIndex = index);
                 Navigator.pop(drawerContext);
 
                 if (index == 1) {
@@ -508,24 +733,25 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                       }),
                     ),
                   );
+                } else if (index == 2) {
+                  changeEventBorderColour();
+                  widget.toggleTheme();
                 }
               },
               labelType: NavigationRailLabelType.all,
+              unselectedLabelTextStyle: TextStyle(fontSize: 18, color: sideBarTextColour),
               destinations: const [
                 NavigationRailDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home),
+                  icon: Icon(Icons.home_outlined, size: 43),
                   label: Text('Home'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.chat_outlined),
-                  selectedIcon: Icon(Icons.chat),
+                  icon: Icon(Icons.chat_outlined, size: 35),
                   label: Text('AI chat'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
-                  label: Text('Settings'),
+                  icon: Icon(Icons.invert_colors, size: 40),
+                  label: Text('Colour Theme'),
                 ),
               ],
             ),
@@ -558,60 +784,87 @@ class _CalendarHomePage extends State<CalendarHomePage> {
               padding: const EdgeInsets.only(top: 20.0),
               child: Column(
                 children: <Widget>[
-                  TableCalendar<DisplayEvent>(
-                    firstDay: kFirstDay,
-                    lastDay: kLastDay,
-                    focusedDay: _focusedDay,
-                    // Pass a function that uses the loaded kEvents map
-                    eventLoader: (day) => _getEventsForDay(day, kEvents),
-                    selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                    onDaySelected: (selectedDay, focusedDay) {
-                      if (!isSameDay(_selectedDay, selectedDay)) {
-                        setState(() {
-                          _selectedDay = selectedDay;
-                          _focusedDay = focusedDay;
-                        });
-                        // Update the ValueNotifier with events from the loaded map
-                        _selectedEvents.value = _getEventsForDay(
-                          selectedDay,
-                          kEvents,
-                        );
-                      }
-                    },
-                    calendarFormat: _calendarFormat,
-                    onFormatChanged: (format) =>
-                        setState(() => _calendarFormat = format),
-                    onPageChanged: (focusedDay) => _focusedDay = focusedDay,
-                  ),
-                  const SizedBox(height: 8.0),
-                  FilledButton(
-                    onPressed: () async {
-                      String? events = await importIcsFile();
-                      if (events != null) {
-                        await _addEventFromIcs(events);
-                      }
-                    },
-                    child: const Text('Upload'),
-                  ),
-                  const SizedBox(height: 8.0),
-                  FilledButton(
-                    onPressed: () => addEditEvent(
-                      context,
-                      0,
-                      Event(
-                        title: "",
-                        description: "",
-                        startTime: DateTime.now(),
-                        endTime: DateTime.now(),
-                        rrule: "",
-                        parentId: 0,
-                        exdate: "",
+                  Card(
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(
+                        color: Colors.grey,
+                        width: 4,
                       ),
-                      _updateCalendar, // Passed callback
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text('Add Event'),
+                    margin: EdgeInsets.all(8),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: TableCalendar<DisplayEvent>(
+                        firstDay: kFirstDay,
+                        lastDay: kLastDay,
+                        focusedDay: _focusedDay,
+                        // Pass a function that uses the loaded kEvents map
+                        eventLoader: (day) => _getEventsForDay(day, kEvents),
+                        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                        onDaySelected: (selectedDay, focusedDay) {
+                          if (!isSameDay(_selectedDay, selectedDay)) {
+                            setState(() {
+                              _selectedDay = selectedDay;
+                              _focusedDay = focusedDay;
+                            });
+                            // Update the ValueNotifier with events from the loaded map
+                            _selectedEvents.value = _getEventsForDay(
+                              selectedDay,
+                              kEvents,
+                            );
+                          }
+                        },
+                        calendarFormat: _calendarFormat,
+                        onFormatChanged: (format) =>
+                            setState(() => _calendarFormat = format),
+                        onPageChanged: (focusedDay) => _focusedDay = focusedDay,
+                        calendarStyle: CalendarStyle(
+                          markerDecoration: BoxDecoration(
+                            color: calendarDots,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8.0),
+                  const SizedBox(height: 30.0),
+                  SizedBox(
+                    width: 150.0,
+                    height: 50.0,
+                    child: FilledButton(
+                      onPressed: () async {
+                        String? events = await importIcsFile();
+                        if (events != null) {
+                          await _addEventFromIcs(events);
+                        }
+                      },
+                      child: const Text('Upload'),
+                    ),
+                  ),
+                  const SizedBox(height: 10.0),
+                  SizedBox(
+                    width: 150.0,
+                    height: 50.0,
+                    child: FilledButton(
+                      onPressed: () => addEditEvent(
+                        context,
+                        0,
+                        Event(
+                          title: "",
+                          description: "",
+                          startTime: _focusedDay,
+                          endTime: _focusedDay,
+                          rrule: "",
+                          parentId: 0,
+                          exdate: "",
+                        ),
+                        _updateCalendar, // Passed callback
+                      ),
+                      child: const Text('Add Event'),
+                    ),
+                  ),
+                  const SizedBox(height: 30.0),
                   Expanded(
                     child: ValueListenableBuilder<List<DisplayEvent>>(
                       valueListenable: _selectedEvents,
@@ -629,7 +882,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                                 vertical: 4.0,
                               ),
                               decoration: BoxDecoration(
-                                border: Border.all(),
+                                border: Border.all(color: dailyEventBorderColour),
                                 borderRadius: BorderRadius.circular(12.0),
                               ),
                               child: ListTile(

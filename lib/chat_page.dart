@@ -278,6 +278,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return IconTheme(
       data: IconThemeData(color: Theme.of(context).colorScheme.secondary),
       child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 30.0),
         margin: const EdgeInsets.symmetric(horizontal: 8.0),
         child: Row(
           children: <Widget>[
@@ -368,6 +369,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             .text, // The LLM response containing markdown
                         shrinkWrap:
                             true, // Important to prevent unbounded height errors
+                        styleSheet: MarkdownStyleSheet(
+                          p: TextStyle(color: Colors.black87),
+                          code: TextStyle(color: Colors.deepPurple),
+                        ),
                       )
                     : Text(
                         message.text,
@@ -403,7 +408,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   : message.isError
                   ? 'LLM (Error)'
                   : 'LLM',
-              style: TextStyle(fontSize: 12.0, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 12.0),
             ),
           ),
         ],
