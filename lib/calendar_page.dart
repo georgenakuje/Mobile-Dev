@@ -101,10 +101,10 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
   DateTime start = event.startTime;
   DateTime end = event.endTime;
 
-  String? repeatRule;
+  // --- CHANGE 1: Set Default "Never" for new events ---
+  String? repeatRule = "Never";
   String repeatTitle = "Event Repetition";
   String repeatDisplay = "Repeat";
-  int initialItemIndex = 0; // Default index
 
   List<String> repeatOptions = [
     "Never",
@@ -120,14 +120,8 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
     repeatOptions = ["This Event", "All Events"];
     repeatTitle = "Delete Amount";
     repeatDisplay = "Delete Option";
-
-    // Default to "This Event" for deletion
+    // --- CHANGE 2: Set Default "This Event" for delete mode ---
     repeatRule = "This Event";
-    initialItemIndex = repeatOptions.indexOf("This Event");
-  } else {
-    // Default to "Never" for adding
-    repeatRule = "Never";
-    initialItemIndex = repeatOptions.indexOf("Never");
   }
 
   return showDialog<({Event? event, String freq})>(
@@ -180,17 +174,22 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                     child: Text(pickerTimeFormatter.format(end)),
                   ),
 
-                  // REPEAT RULE BUTTON (for both Add/Edit and Delete)
+                  // REPEAT RULE BUTTON
                   ElevatedButton(
-                    // Changed from TextButton to ElevatedButton for shadow/elevation
-                    style: ElevatedButton.styleFrom(
-                      elevation: 5, // Adds a shadow effect
-                    ),
+                    style: ElevatedButton.styleFrom(elevation: 5),
                     onPressed: () async {
+                      // --- CHANGE 3: Calculate index so the wheel opens on the selected item ---
+                      int selectedIndex = repeatOptions.indexOf(
+                        currentRepeatDisplay,
+                      );
+                      if (selectedIndex == -1) selectedIndex = 0;
+
                       await Picker(
                         adapter: PickerDataAdapter<String>(
                           pickerData: repeatOptions,
                         ),
+                        // Pass the calculated index here
+                        selecteds: [selectedIndex],
                         hideHeader: false,
                         title: Text(repeatTitle),
                         height: 250,
@@ -221,14 +220,13 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
 
               if (specifier == 1)
                 TextButton(
-                  // DELETE BUTTON: Check if a delete option has been selected
+                  // DELETE BUTTON
                   onPressed: repeatRule == null
                       ? null
                       : () {
                           deleteEvent(event, repeatRule!, onUpdate);
                           Navigator.pop(context, null);
                         },
-                  // Set the style based on whether an option is selected
                   child: Text(
                     "Delete",
                     style: TextStyle(
@@ -238,11 +236,14 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                 ),
 
               TextButton(
-                // SAVE BUTTON: Check if a repeat option has been selected for a NEW event
+                // SAVE BUTTON
+                // Since we set a default repeatRule, this button will now be active immediately
                 onPressed: (specifier == 0 && repeatRule == null)
                     ? null
                     : () {
                         if (specifier == 1) {
+                          // Logic for Editing an existing event
+                          // (Note: Your original logic here seemed to delete and re-insert)
                           repeatRule = "This Event";
                           deleteEvent(event, repeatRule!, onUpdate);
                           final db_helper = DatabaseHelper();
@@ -258,21 +259,19 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                             ),
                           );
                         } else {
+                          // Logic for New Event
                           repeatRule = generateIcsRrule(
                             option: repeatRule!,
                             endDate: end,
                           );
                         }
 
-                        // If specifier == 1 (Edit), repeatRule is for delete, which is irrelevant for Save.
-                        // If specifier == 0 (New), repeatRule must be set (or defaulted if necessary).
                         Navigator.pop(context, (
                           event: Event(
                             title: titleController.text,
                             description: "",
                             startTime: start,
                             endTime: end,
-                            // Use a default value if creating a new event and repeatRule is still null
                             rrule: repeatRule ?? "",
                             parentId: 0,
                             exdate: "",
