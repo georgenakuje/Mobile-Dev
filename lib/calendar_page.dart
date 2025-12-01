@@ -890,8 +890,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                                     await flutterLocalNotificationsPlugin.show(
                                       0,
                                       'These are your event details!',
-                                      '$e' +
-                                          ' starting at ${e.startTime.hour.toString()}',
+                                      '$e.title' + ' starting at ${e.startTime.hour.toString()} and ending at ${e.endTime.hour.toString()}',
                                       platformChannelSpecifics,
                                       payload: 'Notification Payload',
                                     ),
@@ -984,11 +983,11 @@ List<Event> parseIcsToDisplayEvents(String icsText) {
         Event(
           id: null,
           title: title,
-          description: '', // empty description is fine
+          description: '',
           startTime: start,
           endTime: end,
           rrule: rrule,
-          parentId: -1, // -1 is your “new event” sentinel in the DB
+          parentId: -1, // -1 means new event in the DB
           exdate: exDates,
         ),
       );
