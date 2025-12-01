@@ -184,50 +184,56 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _importAndSummarizeIcs() async {
-    final events = await importIcsFile();
-    if (events.isEmpty) return;
-
-    final formatter = DateFormat('EEE MMM d, h:mm a');
-    final summaryPrompt = StringBuffer();
-
-    summaryPrompt.writeln("These events were imported from a calendar file:");
-    for (final e in events) {
-      summaryPrompt.writeln(
-        "- ${e.title} (${formatter.format(e.startTime)} to ${formatter.format(e.endTime)})",
-      );
+    String? events = await importIcsFile();
+    // if (events.isEmpty) return;
+    //
+    // final formatter = DateFormat('EEE MMM d, h:mm a');
+    // final summaryPrompt = StringBuffer();
+    //
+    // summaryPrompt.writeln("These events were imported from a calendar file:");
+    // for (final e in events) {
+    //   summaryPrompt.writeln(
+    //     "- ${e.title} (${formatter.format(e.startTime)} to ${formatter.format(e.endTime)})",
+    //   );
+    // }
+    // summaryPrompt.writeln("Summarize these events briefly for the user.");
+    //
+    // // Add user prompt visually
+    // setState(() {
+    //   _messages.add(Message.user(summaryPrompt.toString()));
+    //   _messages.add(Message.loading());
+    // });
+    //
+    // final chatService = ref.read(geminiChatServiceProvider);
+    // final response = await chatService.sendMessage(summaryPrompt.toString());
+    //
+    // setState(() {
+    //   _messages.removeWhere((m) => m.isLoading);
+    //   _messages.add(
+    //     response.isSuccess && response.content != null
+    //         ? Message.llm(response.content!)
+    //         : Message.error(response.error ?? 'Unknown error'),
+    //   );
+    // });
+    late final match = _iCalRegex.firstMatch(events!);
+    if (match != null) {
+      final icsText = match.group(0)!;
+      widget.onIcsDetected(icsText);
     }
-    summaryPrompt.writeln("Summarize these events briefly for the user.");
-
-    // Add user prompt visually
-    setState(() {
-      _messages.add(Message.user(summaryPrompt.toString()));
-      _messages.add(Message.loading());
-    });
-
-    final chatService = ref.read(geminiChatServiceProvider);
-    final response = await chatService.sendMessage(summaryPrompt.toString());
-
-    setState(() {
-      _messages.removeWhere((m) => m.isLoading);
-      _messages.add(
-        response.isSuccess && response.content != null
-            ? Message.llm(response.content!)
-            : Message.error(response.error ?? 'Unknown error'),
-      );
-    });
   }
+
 
   // Function to copy text to the clipboard and show a confirmation
-  void _copyToClipboard(String text) async {
-    await Clipboard.setData(ClipboardData(text: text));
-
-    // Optionally show a confirmation to the user
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Copied to clipboard!')));
-    }
-  }
+  // void _copyToClipboard(String text) async {
+  //   await Clipboard.setData(ClipboardData(text: text));
+  //
+  //   // Optionally show a confirmation to the user
+  //   if (mounted) {
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(const SnackBar(content: Text('Copied to clipboard!')));
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -375,15 +381,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
               ),
               if (isLLM && hasICal && !isUser)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0, top: 8.0),
-                  child: IconButton(
-                    icon: const Icon(Icons.copy, size: 20),
-                    onPressed: () => _copyToClipboard(iCalContent),
-                    tooltip: 'Copy iCalendar content',
-                    color: Colors.grey.shade600,
-                  ),
-                ),
+                // Padding(
+                //   padding: const EdgeInsets.only(right: 8.0, top: 8.0),
+                //   child: IconButton(
+                //     icon: const Icon(Icons.copy, size: 20),
+                //     onPressed: () => _copyToClipboard(iCalContent),
+                //     tooltip: 'Copy iCalendar content',
+                //     color: Colors.grey.shade600,
+                //   ),
+                // ),
               if (isUser &&
                   hasICal) // Although generally not needed for user, keep consistent structure
                 const SizedBox(width: 36), // Placeholder for alignment

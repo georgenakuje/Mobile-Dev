@@ -10,6 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'event.dart';
 import 'package:intl/intl.dart';
+import 'ics_import.dart';
 import 'rrule_generator_helper.dart';
 import './services/notification_service.dart';
 
@@ -448,29 +449,14 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   }
 
   Future<void> _addEventFromIcs(String icsText) async {
-    final events = parseIcsToDisplayEvents(icsText);
-    final dbHelper = DatabaseHelper();
+    await saveIcsToDatabase(icsText);
 
-    for (final d in events) {
-      final event = Event(
-        id: null,
-        title: d.title,
-        description: d.description,
-        startTime: d.startTime,
-        endTime: d.endTime,
-        rrule: "",
-        parentId: d.parentId,
-        exdate: "",
-      );
-      await dbHelper.insertEvent(event);
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Calendar updated')),
+    );
 
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Event Added!')));
-      _updateCalendar();
-    }
+    _updateCalendar();
   }
 
   @override
@@ -599,7 +585,12 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                   ),
                   const SizedBox(height: 8.0),
                   FilledButton(
-                    onPressed: pickFile,
+                    onPressed: () async {
+                      String? events = await importIcsFile();
+                      if (events != null) {
+                        await _addEventFromIcs(events);
+                      }
+                    },
                     child: const Text('Upload'),
                   ),
                   const SizedBox(height: 8.0),
