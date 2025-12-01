@@ -10,6 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'event.dart';
 import 'package:intl/intl.dart';
+import 'rrule_generator_helper.dart';
 
 final notifTimeFormatter = DateFormat('h:mm a');
 final pickerTimeFormatter = DateFormat('dd MMM yyyy h:mm a');
@@ -46,10 +47,12 @@ void pickFile() async {
   }
 }
 
-
-
-
-void addEditEvent(BuildContext context, int specifier, Event event) async {
+void addEditEvent(
+  BuildContext context,
+  int specifier,
+  Event event,
+  VoidCallback onUpdate,
+) async {
   String evTitle = "New Event";
   String addOrEdit = "New Event";
   if (specifier == 1) {
@@ -57,7 +60,14 @@ void addEditEvent(BuildContext context, int specifier, Event event) async {
     addOrEdit = "Edit Event";
   }
 
-  final result = await addEditEventPopOut(addOrEdit, context, event, evTitle, specifier);
+  final result = await addEditEventPopOut(
+    addOrEdit,
+    context,
+    event,
+    evTitle,
+    specifier,
+    onUpdate,
+  );
   final db_helper = DatabaseHelper();
   int id;
 
@@ -66,46 +76,56 @@ void addEditEvent(BuildContext context, int specifier, Event event) async {
     if (specifier == 1) {
       //int id = db_helper.editEvent(evTitle, start, end, newEvent);
       print("Editing");
-      //updateCalendar()
-    }
-    else if (newEvent != null) {
+      onUpdate();
+    } else if (newEvent != null) {
       id = await db_helper.insertEvent(newEvent);
       print("adding");
       print(id);
       print(newEvent.title);
-      //updateCalendar();
-
+      onUpdate();
     }
   }
-
-
-  // UPDATE VISUALS AFTER ALL CONFIRMS
-  // add print statements through the flow to make sure the functions for
-  // delete, add, edit will be called properly when implemented
-
-
 }
 
-Future<({Event? event, String freq})?> addEditEventPopOut(String addOrEdit, BuildContext context, Event event, String title, int specifier) async {
+Future<({Event? event, String freq})?> addEditEventPopOut(
+  String addOrEdit,
+  BuildContext context,
+  Event event,
+  String title,
+  int specifier,
+  VoidCallback onUpdate,
+) async {
   final titleController = TextEditingController(text: title);
-  String? oldTitle = title;
   DateTime start = event.startTime;
   DateTime end = event.endTime;
 
-  String repeatRule = "Repeat";
+  String? repeatRule;
   String repeatTitle = "Event Repetition";
-  List<String> repeatOptions = ["Never","Daily","Weekly","Bi-Weekly","Monthly","Yearly"];
+  String repeatDisplay = "Repeat";
+
+  List<String> repeatOptions = [
+    "Never",
+    "Daily",
+    "Weekly",
+    "Bi-Weekly",
+    "Monthly",
+    "Yearly",
+  ];
+
   if (specifier == 1) {
     repeatOptions = ["This Event", "All Events"];
     repeatTitle = "Delete Amount";
+    repeatDisplay = "Delete Option";
   }
 
-  return showDialog<({Event? event, String freq})> (
+  return showDialog<({Event? event, String freq})>(
     context: context,
     barrierDismissible: false,
     builder: (context) {
       return StatefulBuilder(
         builder: (context, setState) {
+          String currentRepeatDisplay = repeatRule ?? repeatDisplay;
+
           return AlertDialog(
             actionsAlignment: MainAxisAlignment.center,
             title: Text(addOrEdit),
@@ -124,48 +144,50 @@ Future<({Event? event, String freq})?> addEditEventPopOut(String addOrEdit, Buil
 
                   Text("Start:"),
                   TextButton(
-                      onPressed: () async {
-                        final picked = await _showDateTimePicker(context,
-                            start);
-                        if (picked != null) {
-                          setState(() {
-                            start = picked;
-                          });
-                        }
-                      },
-                      child: Text(pickerTimeFormatter.format(start))
+                    onPressed: () async {
+                      final picked = await _showDateTimePicker(context, start);
+                      if (picked != null) {
+                        setState(() {
+                          start = picked;
+                        });
+                      }
+                    },
+                    child: Text(pickerTimeFormatter.format(start)),
                   ),
 
                   Text("End:"),
                   TextButton(
-                      onPressed: () async {
-                        final picked = await _showDateTimePicker(context, end);
-                        if (picked != null) {
-                          setState(() {
-                            end = picked;
-                          });
-                        }
-                      },
-                      child: Text(pickerTimeFormatter.format(end))
+                    onPressed: () async {
+                      final picked = await _showDateTimePicker(context, end);
+                      if (picked != null) {
+                        setState(() {
+                          end = picked;
+                        });
+                      }
+                    },
+                    child: Text(pickerTimeFormatter.format(end)),
                   ),
 
+                  // REPEAT RULE BUTTON (for both Add/Edit and Delete)
                   TextButton(
                     onPressed: () async {
                       await Picker(
                         adapter: PickerDataAdapter<String>(
-                            pickerData: repeatOptions),
+                          pickerData: repeatOptions,
+                        ),
                         hideHeader: false,
                         title: Text(repeatTitle),
                         height: 250,
                         itemExtent: 40,
                         onConfirm: (Picker picker, List value) {
-                          setState( () {
+                          setState(() {
                             repeatRule = picker.getSelectedValues()[0];
                           });
                         },
                       ).showModal(context);
                     },
-                    child: Text(repeatRule),
+                    // ⭐️ Uses the dynamic display text
+                    child: Text(currentRepeatDisplay),
                   ),
                 ],
               ),
@@ -173,48 +195,68 @@ Future<({Event? event, String freq})?> addEditEventPopOut(String addOrEdit, Buil
 
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context, null),
-                  child: Text("Cancel")
+                onPressed: () => Navigator.pop(context, null),
+                child: Text("Cancel"),
               ),
 
               if (specifier == 1)
                 TextButton(
-                  onPressed: () {
-                    deleteEvent(event, repeatRule);
-                    Navigator.pop(context, null);
-                  },
-                  child: Text("Delete"),
+                  // DELETE BUTTON: Check if a delete option has been selected
+                  onPressed: repeatRule == null
+                      ? null
+                      : () {
+                          deleteEvent(event, repeatRule!, onUpdate);
+                          Navigator.pop(context, null);
+                        },
+                  // Set the style based on whether an option is selected
+                  child: Text(
+                    "Delete",
+                    style: TextStyle(
+                      color: repeatRule == null ? Colors.grey : Colors.red,
+                    ),
+                  ),
                 ),
 
               TextButton(
-                onPressed: () {
-                  Navigator.pop(
-                      context, (event: Event(
-                    title: titleController.text,
-                    description: "",
-                    startTime: start,
-                    endTime: end,
-                    rrule: "",
-                    parentId: 0,
-                    exdate: null,
-                  ), freq: repeatRule
-                  )
-                  );
-                },
+                // SAVE BUTTON: Check if a repeat option has been selected for a NEW event
+                onPressed: (specifier == 0 && repeatRule == null)
+                    ? null
+                    : () {
+                        repeatRule = generateIcsRrule(
+                          option: repeatRule!,
+                          endDate: end,
+                        );
+
+                        // If specifier == 1 (Edit), repeatRule is for delete, which is irrelevant for Save.
+                        // If specifier == 0 (New), repeatRule must be set (or defaulted if necessary).
+                        Navigator.pop(context, (
+                          event: Event(
+                            title: titleController.text,
+                            description: "",
+                            startTime: start,
+                            endTime: end,
+                            // Use a default value if creating a new event and repeatRule is still null
+                            rrule: repeatRule ?? "",
+                            parentId: 0,
+                            exdate: "",
+                          ),
+                          freq: repeatRule ?? "",
+                        ));
+                      },
                 child: Text("Save"),
               ),
             ],
           );
-        }
+        },
       );
     },
   );
 }
 
-
-
-
-Future<DateTime?> _showDateTimePicker(BuildContext context, DateTime? date) async {
+Future<DateTime?> _showDateTimePicker(
+  BuildContext context,
+  DateTime? date,
+) async {
   DateTime? day;
 
   await Picker(
@@ -235,11 +277,41 @@ Future<DateTime?> _showDateTimePicker(BuildContext context, DateTime? date) asyn
   return day;
 }
 
-void deleteEvent(Event event, String freq) {
+void deleteEvent(Event event, String freq, VoidCallback onUpdate) async {
   final db_helper = DatabaseHelper();
 
-  // freq is either "Current" or "All" for how many to delete
-  print("Deleting");//int id = db_helper.deleteEvent(event);
+  print("Deleting event: ${event.title}, Frequency: $freq");
+
+  Event? fetchedEvent = await db_helper.fetchById(event.id);
+
+  if (fetchedEvent == null) {
+    return;
+  }
+
+  // Case 1: Delete all occurrences (or a non-recurring event)
+  if (freq == "All Events" ||
+      (freq == "This Event" &&
+          (fetchedEvent.rrule == null || fetchedEvent.rrule == ""))) {
+    // This covers non-recurring events, or when the user explicitly chose to delete all
+    int result = await db_helper.deleteEvent(event.id!);
+    print("Deleted event event with ID: ${event.id}, Result: $result");
+  }
+  // Case 2: Delete only the current occurrence (by adding an EXDATE)
+  else if (freq == "This Event" &&
+      fetchedEvent.rrule != null &&
+      fetchedEvent.rrule != "") {
+    int? id = event.id;
+    DateTime dateToExclude =
+        event.startTime; // Use the start time of the instance
+
+    int result = await db_helper.addExdateToEvent(id!, dateToExclude);
+    print(
+      "Added EXDATE for instance ${event.startTime} to master event ID: $id, Result: $result",
+    );
+  }
+
+  // After the database operation is complete, refresh the calendar.
+  onUpdate();
 }
 
 class _CalendarHomePage extends State<CalendarHomePage> {
@@ -257,10 +329,17 @@ class _CalendarHomePage extends State<CalendarHomePage> {
 
   // Helper function to get events for a day from the map
   List<DisplayEvent> _getEventsForDay(
-      DateTime day,
-      LinkedHashMap<DateTime, List<DisplayEvent>> eventsMap,
-      ) {
+    DateTime day,
+    LinkedHashMap<DateTime, List<DisplayEvent>> eventsMap,
+  ) {
     return eventsMap[day] ?? [];
+  }
+
+  void _updateCalendar() {
+    setState(() {
+      _eventsFuture = getEventsFromDatabase();
+      _selectedEvents.value = [];
+    });
   }
 
   Future<void> _requestNotificationPermission() async {
@@ -270,16 +349,16 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   }
 
   static const AndroidNotificationDetails androidPlatformChannelSpecifics =
-  AndroidNotificationDetails(
-    'your_channel_id',
-    'your_channel_name',
-    channelDescription: 'your channel description',
-    importance: Importance.max,
-    priority: Priority.high,
-  );
+      AndroidNotificationDetails(
+        'your_channel_id',
+        'your_channel_name',
+        channelDescription: 'your channel description',
+        importance: Importance.max,
+        priority: Priority.high,
+      );
 
   static const NotificationDetails platformChannelSpecifics =
-  NotificationDetails(android: androidPlatformChannelSpecifics);
+      NotificationDetails(android: androidPlatformChannelSpecifics);
 
   Future<void> _initNotifications() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -303,17 +382,18 @@ class _CalendarHomePage extends State<CalendarHomePage> {
         description: d.description,
         startTime: d.startTime,
         endTime: d.endTime,
-        rrule: null,
+        rrule: "",
         parentId: d.parentId,
-        exdate: null,
+        exdate: "",
       );
       await dbHelper.insertEvent(event);
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Event Added!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Event Added!')));
+      _updateCalendar();
     }
   }
 
@@ -356,14 +436,10 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ChatScreen(
-                            (icsText) async {
-                          await _addEventFromIcs(icsText);
-                          setState(() {
-                            _eventsFuture = getEventsFromDatabase();
-                          });
-                        },
-                      ),
+                      builder: (context) => ChatScreen((icsText) async {
+                        await _addEventFromIcs(icsText);
+                        // The call to _updateCalendar is now inside _addEventFromIcs
+                      }),
                     ),
                   );
                 }
@@ -446,9 +522,22 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                     onPressed: pickFile,
                     child: const Text('Upload'),
                   ),
-                  const SizedBox(height: 8.0,),
+                  const SizedBox(height: 8.0),
                   FilledButton(
-                    onPressed: () => addEditEvent(context, 0, Event(title: "", description: "", startTime: DateTime.now(), endTime: DateTime.now(), rrule: "", parentId: 0, exdate: null)),
+                    onPressed: () => addEditEvent(
+                      context,
+                      0,
+                      Event(
+                        title: "",
+                        description: "",
+                        startTime: DateTime.now(),
+                        endTime: DateTime.now(),
+                        rrule: "",
+                        parentId: 0,
+                        exdate: "",
+                      ),
+                      _updateCalendar, // Passed callback
+                    ),
                     child: const Text('Add Event'),
                   ),
                   const SizedBox(height: 8.0),
@@ -474,23 +563,40 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                               ),
                               child: ListTile(
                                 onTap: () async =>
-                                await flutterLocalNotificationsPlugin.show(
-                                  0,
-                                  'These are your event details!',
-                                  '$e' +
-                                      ' starting at ${e.startTime.hour.toString()}',
-                                  platformChannelSpecifics,
-                                  payload: 'Notification Payload',
-                                ),
+                                    await flutterLocalNotificationsPlugin.show(
+                                      0,
+                                      'These are your event details!',
+                                      '$e' +
+                                          ' starting at ${e.startTime.hour.toString()}',
+                                      platformChannelSpecifics,
+                                      payload: 'Notification Payload',
+                                    ),
                                 title: Text(e.title),
                                 subtitle: Text(
                                   '${e.startTime.hour.toString().padLeft(2, '0')}:${e.startTime.minute.toString().padLeft(2, '0')}'
-                                      ' - '
-                                      '${e.endTime.hour.toString().padLeft(2, '0')}:${e.endTime.minute.toString().padLeft(2, '0')}',
+                                  ' - '
+                                  '${e.endTime.hour.toString().padLeft(2, '0')}:${e.endTime.minute.toString().padLeft(2, '0')}',
                                 ),
                                 trailing: IconButton(
-                                    onPressed: () { addEditEvent(context, 1, Event(title: e.title, description: e.description, startTime: e.startTime, endTime: e.endTime, rrule: "", parentId: 0, exdate: null)); },
-                                    icon: Icon(Icons.edit)),
+                                  onPressed: () {
+                                    addEditEvent(
+                                      context,
+                                      1,
+                                      Event(
+                                        id: e.id,
+                                        title: e.title,
+                                        description: e.description,
+                                        startTime: e.startTime,
+                                        endTime: e.endTime,
+                                        rrule: "",
+                                        parentId: 0,
+                                        exdate: "",
+                                      ),
+                                      _updateCalendar, // Passed callback
+                                    );
+                                  },
+                                  icon: Icon(Icons.edit),
+                                ),
                               ),
                             );
                           },
@@ -518,8 +624,7 @@ List<DisplayEvent> parseIcsToDisplayEvents(String icsText) {
     String? title;
     DateTime? start;
     DateTime? end;
-    final lines =
-    block.split(RegExp(r'\r?\n')).map((l) => l.trim()).toList();
+    final lines = block.split(RegExp(r'\r?\n')).map((l) => l.trim()).toList();
     for (final line in lines) {
       if (line.startsWith('SUMMARY:')) {
         title = line.substring('SUMMARY:'.length).trim();
@@ -534,10 +639,10 @@ List<DisplayEvent> parseIcsToDisplayEvents(String icsText) {
         DisplayEvent(
           id: null,
           title: title,
-          description: '',    // empty description is fine
+          description: '', // empty description is fine
           startTime: start,
           endTime: end,
-          parentId: -1,       // -1 is your “new event” sentinel in the DB
+          parentId: -1, // -1 is your “new event” sentinel in the DB
         ),
       );
     }
@@ -554,19 +659,19 @@ DateTime _parseIcsDate(String line) {
   if (value.length == 15) {
     return DateTime.parse(
       '${value.substring(0, 4)}-'
-          '${value.substring(4, 6)}-'
-          '${value.substring(6, 8)} '
-          '${value.substring(9, 11)}:'
-          '${value.substring(11, 13)}:'
-          '${value.substring(13, 15)}',
+      '${value.substring(4, 6)}-'
+      '${value.substring(6, 8)} '
+      '${value.substring(9, 11)}:'
+      '${value.substring(11, 13)}:'
+      '${value.substring(13, 15)}',
     );
   } else if (value.length == 13) {
     return DateTime.parse(
       '${value.substring(0, 4)}-'
-          '${value.substring(4, 6)}-'
-          '${value.substring(6, 8)} '
-          '${value.substring(9, 11)}:'
-          '${value.substring(11, 13)}:00',
+      '${value.substring(4, 6)}-'
+      '${value.substring(6, 8)} '
+      '${value.substring(9, 11)}:'
+      '${value.substring(11, 13)}:00',
     );
   } else {
     return DateTime.parse(value);

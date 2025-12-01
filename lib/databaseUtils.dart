@@ -52,7 +52,7 @@ class DatabaseHelper {
       exdate TEXT           -- Comma separated list of dates to exclude (cancelled instances)            ****SHOULD BE STORED AS UTC****
     )''');
 
-    // Add initial hardcoded entries
+    // Add initial hardcoded entries for testing
     final initialEvents = [
       Event(
         title: 'Meeting (Default)',
@@ -70,6 +70,63 @@ class DatabaseHelper {
       batch.insert(tableName, event.excludePrimaryKeyMap());
     }
     await batch.commit(noResult: true);
+  }
+
+  Future<int> deleteEvent(int? id) async {
+    final db = await database;
+    return await db.delete('events', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<Event?> fetchById(int? id) async {
+    final db = await database;
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'events',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isNotEmpty) {
+      return Event.fromJson(maps.first);
+    } else {
+      // No entry found with that ID
+      return null;
+    }
+  }
+
+  Future<int> addExdateToEvent(int masterId, DateTime exdate) async {
+    final db = await database;
+
+    // Fetch the current event record to get the existing exdate string
+    List<Map<String, dynamic>> maps = await db.query(
+      'events',
+      columns: ['exdate'],
+      where: 'id = ?',
+      whereArgs: [masterId],
+    );
+
+    String? currentExdates = maps.isNotEmpty
+        ? maps.first['exdate'] as String?
+        : null;
+
+    // Format the new exdate string
+    String newExdateString = exdate.toIso8601String();
+
+    // Append the new exdate to the existing list, using a separator (e.g., comma)
+    String updatedExdates;
+    if (currentExdates == null || currentExdates.isEmpty) {
+      updatedExdates = newExdateString;
+    } else {
+      updatedExdates = '$currentExdates,$newExdateString';
+    }
+
+    // Update the event record with the new exdate string
+    return await db.update(
+      'events',
+      {'exdate': updatedExdates},
+      where: 'id = ?',
+      whereArgs: [masterId],
+    );
   }
 
   // CRUD Operation: Insert a new event
@@ -121,7 +178,7 @@ class DatabaseHelper {
       final rruleString = event['rrule'] as String?;
       final exdateString = event['exdate'] as String?;
 
-      if (rruleString == null) {
+      if (rruleString == "" || rruleString == null || rruleString == "Never") {
         // --- HANDLE NON-RECURRING ---
         displayEvents.add(
           DisplayEvent(

@@ -48,11 +48,9 @@ class ChatApp extends ConsumerWidget {
     return modelAsyncValue.when(
       // === State 1: Data Loaded (Model Initialized) ===
       data: (model) {
-        return ChatScreen(
-              (icsText) async {
-            // no-op when ChatApp is used standalone
-          },
-        );
+        return ChatScreen((icsText) async {
+          // no-op when ChatApp is used standalone
+        });
       },
       // === State 2: Loading ===
       loading: () {
@@ -235,7 +233,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Simple LLM Chat Interface'),
+        title: const Text('Chat Page'),
         actions: [
           IconButton(
             icon: const Icon(Icons.upload_file),
@@ -344,37 +342,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 child: message.isLoading
                     ? const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Typing...',
-                      style: TextStyle(fontStyle: FontStyle.italic),
-                    ),
-                  ],
-                )
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Typing...',
+                            style: TextStyle(fontStyle: FontStyle.italic),
+                          ),
+                        ],
+                      )
                     : isLLM
                     ? MarkdownBody(
-                  data: message
-                      .text, // The LLM response containing markdown
-                  shrinkWrap:
-                  true, // Important to prevent unbounded height errors
-                )
+                        data: message
+                            .text, // The LLM response containing markdown
+                        shrinkWrap:
+                            true, // Important to prevent unbounded height errors
+                      )
                     : Text(
-                  message.text,
-                  style: TextStyle(
-                    color: isUser
-                        ? Colors.black87
-                        : (message.isError
-                        ? Colors.red.shade900
-                        : Colors.black),
-                  ),
-                ),
+                        message.text,
+                        style: TextStyle(
+                          color: isUser
+                              ? Colors.black87
+                              : (message.isError
+                                    ? Colors.red.shade900
+                                    : Colors.black),
+                        ),
+                      ),
               ),
               if (isLLM && hasICal && !isUser)
                 Padding(
