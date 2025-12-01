@@ -16,7 +16,9 @@ class NotificationService {
     tz.initializeTimeZones();
 
     // Android initialization settings
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
 
     // iOS/macOS initialization settings
     const iosSettings = DarwinInitializationSettings();
@@ -43,7 +45,10 @@ class NotificationService {
     required String body,
     required DateTime scheduledTime,
   }) async {
-    final tz.TZDateTime tzScheduled = tz.TZDateTime.from(scheduledTime, tz.local);
+    final tz.TZDateTime tzScheduled = tz.TZDateTime.from(
+      scheduledTime,
+      tz.local,
+    );
 
     // Schedule the notification
     await _notifications.zonedSchedule(
@@ -63,5 +68,9 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
+  }
+
+  static Future<void> cancelAllNotifications() async {
+    await _notifications.cancelAll();
   }
 }

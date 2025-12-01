@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'event.dart';
 import 'package:intl/intl.dart';
 import 'rrule_generator_helper.dart';
+import './services/notification_service.dart';
 
 final notifTimeFormatter = DateFormat('h:mm a');
 final pickerTimeFormatter = DateFormat('dd MMM yyyy h:mm a');
@@ -68,14 +69,15 @@ void addEditEvent(
     specifier,
     onUpdate,
   );
-  final db_helper = DatabaseHelper();
   int id;
 
+  final db_helper = DatabaseHelper();
   if (result != null) {
     Event? newEvent = result.event;
     if (specifier == 1) {
       //int id = db_helper.editEvent(evTitle, start, end, newEvent);
       print("Editing");
+
       onUpdate();
     } else if (newEvent != null) {
       id = await db_helper.insertEvent(newEvent);
@@ -102,6 +104,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
   String? repeatRule;
   String repeatTitle = "Event Repetition";
   String repeatDisplay = "Repeat";
+  int initialItemIndex = 0; // Default index
 
   List<String> repeatOptions = [
     "Never",
@@ -113,9 +116,18 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
   ];
 
   if (specifier == 1) {
+    // Delete/Edit Mode
     repeatOptions = ["This Event", "All Events"];
     repeatTitle = "Delete Amount";
     repeatDisplay = "Delete Option";
+
+    // Default to "This Event" for deletion
+    repeatRule = "This Event";
+    initialItemIndex = repeatOptions.indexOf("This Event");
+  } else {
+    // Default to "Never" for adding
+    repeatRule = "Never";
+    initialItemIndex = repeatOptions.indexOf("Never");
   }
 
   return showDialog<({Event? event, String freq})>(
@@ -169,7 +181,11 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                   ),
 
                   // REPEAT RULE BUTTON (for both Add/Edit and Delete)
-                  TextButton(
+                  ElevatedButton(
+                    // Changed from TextButton to ElevatedButton for shadow/elevation
+                    style: ElevatedButton.styleFrom(
+                      elevation: 5, // Adds a shadow effect
+                    ),
                     onPressed: () async {
                       await Picker(
                         adapter: PickerDataAdapter<String>(
@@ -186,8 +202,12 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                         },
                       ).showModal(context);
                     },
-                    // ⭐️ Uses the dynamic display text
                     child: Text(currentRepeatDisplay),
+                  ),
+
+                  const Text(
+                    "Repeat Options",
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -222,10 +242,27 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                 onPressed: (specifier == 0 && repeatRule == null)
                     ? null
                     : () {
-                        repeatRule = generateIcsRrule(
-                          option: repeatRule!,
-                          endDate: end,
-                        );
+                        if (specifier == 1) {
+                          repeatRule = "This Event";
+                          deleteEvent(event, repeatRule!, onUpdate);
+                          final db_helper = DatabaseHelper();
+                          db_helper.insertEvent(
+                            Event(
+                              title: titleController.text,
+                              description: event.description,
+                              startTime: start,
+                              endTime: end,
+                              rrule: "",
+                              parentId: event.id!,
+                              exdate: "",
+                            ),
+                          );
+                        } else {
+                          repeatRule = generateIcsRrule(
+                            option: repeatRule!,
+                            endDate: end,
+                          );
+                        }
 
                         // If specifier == 1 (Edit), repeatRule is for delete, which is irrelevant for Save.
                         // If specifier == 0 (New), repeatRule must be set (or defaulted if necessary).
@@ -327,6 +364,43 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   // Initialize with an empty value listener until events are loaded
   late ValueNotifier<List<DisplayEvent>> _selectedEvents = ValueNotifier([]);
 
+  /// Schedules a notification for each event one hour before it starts.
+  Future<void> _scheduleAllEventNotifications(
+    LinkedHashMap<DateTime, List<DisplayEvent>> eventsMap,
+  ) async {
+    await NotificationService.cancelAllNotifications();
+
+    //  Convert the map of lists into a single flat list
+    final allEvents = eventsMap.values.expand((list) => list).toList();
+
+    //  Define the current time and iterate through all events
+    final now = DateTime.now();
+
+    for (var event in allEvents) {
+      // Calculate the time one hour before the event
+      final notificationTime = event.startTime.subtract(
+        const Duration(hours: 1),
+      );
+
+      // Ensure the notification is for a future time
+      if (notificationTime.isAfter(now)) {
+        // Use a unique integer ID for the notification.
+        // Using the modulo operator to ensure the ID fits within a 32-bit signed integer.
+        final int id = event.startTime.millisecondsSinceEpoch % 2147483647;
+
+        final title = 'Event Reminder: ${event.title}';
+        final body = 'Your event starts in one hour!';
+
+        await NotificationService.scheduleNotification(
+          id: id,
+          title: title,
+          body: body,
+          scheduledTime: notificationTime,
+        );
+      }
+    }
+  }
+
   // Helper function to get events for a day from the map
   List<DisplayEvent> _getEventsForDay(
     DateTime day,
@@ -338,6 +412,9 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   void _updateCalendar() {
     setState(() {
       _eventsFuture = getEventsFromDatabase();
+      _eventsFuture.then((eventsMap) {
+        _scheduleAllEventNotifications(eventsMap);
+      });
       _selectedEvents.value = [];
     });
   }
@@ -401,7 +478,11 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   void initState() {
     super.initState();
     // Call the db to get events
+
     _eventsFuture = getEventsFromDatabase();
+    _eventsFuture.then((eventsMap) {
+      _scheduleAllEventNotifications(eventsMap);
+    });
 
     flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     _initNotifications();
