@@ -13,6 +13,7 @@ import 'ics_import.dart';
 import 'rrule_generator_helper.dart';
 import './services/notification_service.dart';
 
+//formatters for displaying DateTime values more nicely
 final notifTimeFormatter = DateFormat('h:mm a');
 final pickerDateTimeFormatter = DateFormat('dd MMM yyyy h:mm a');
 final pickerDateFormatter = DateFormat('dd MMM yyyy');
@@ -29,18 +30,20 @@ class Calendar extends StatefulWidget {
 //     // MyHomePage is wrapped in a FutureBuilder internally now.
 //     home: const CalendarHomePage(title: ''),
 //   );
-// }
+// } this is from when it was stateless
 }
 
 class _CalendarState extends State<Calendar> {
   bool darkMode = false;
 
+  //initial light theme
   ThemeData theme = ThemeData(
     colorScheme: ColorScheme.fromSeed(
       seedColor: const Color(0xFFB8C4FF),
     ),
   );
 
+  // toggle from light to dark and back
   void toggleTheme() {
     setState(() {
       darkMode = !darkMode;
@@ -75,6 +78,7 @@ class CalendarHomePage extends StatefulWidget {
 
 
 void addEditEvent(
+  // function for some functionality of the popout and
   BuildContext context,
   int specifier,
   Event event,
@@ -95,9 +99,8 @@ void addEditEvent(
     specifier,
     onUpdate,
   );
-  int id;
 
-  final db_helper = DatabaseHelper();
+  final _ = DatabaseHelper();
   if (result != null) {
     Event? newEvent = result.event;
     if (specifier == 1) {
@@ -106,7 +109,6 @@ void addEditEvent(
 
       onUpdate();
     } else if (newEvent != null) {
-      id = await db_helper.insertEvent(newEvent);
       print("adding");
       onUpdate();
     }
@@ -129,7 +131,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
   String? repeatRule = "Never";
   String repeatTitle = "Event Repetition";
   String repeatDisplay = "Repeat";
-  DateTime repeatEndDate = DateTime(
+  DateTime repeatEndDate = DateTime(// base rrule UNTIL date
     2050,
     event.startTime.month,
     event.startTime.day,
@@ -138,7 +140,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
     0,
   );
 
-  List<String> repeatOptions = [
+  List<String> repeatOptions = [ //options for rrule repeat
     "Never",
     "Daily",
     "Weekly",
@@ -168,7 +170,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
             actionsAlignment: MainAxisAlignment.center,
             title: Text(addOrEdit),
             content: SingleChildScrollView(
-              child: Column(
+              child: Column( //sets the title textbox and controller on the left side of the popout
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
@@ -178,14 +180,14 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                     decoration: InputDecoration(labelText: "Title", labelStyle: TextStyle(fontSize: 21)),
                   ),
 
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 15), //all boxes like this are just white space creators
 
                   Text("Start:", style: TextStyle(fontSize: 15)),
                   const SizedBox(height: 7),
-                  Row(
+                  Row( //contains the buttons for dates and times ; all styled to be the same
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
+                      Container(// button for date
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: Colors.grey,
@@ -197,7 +199,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                           height: 35,
                           child: TextButton(
                             onPressed: () async {
-                              final picked = await _showDatePicker(context, start);
+                              final picked = await _showDatePicker(context, start); //calls this to set the start date value
                               if (picked != null) {
                                 setState(() {
                                   start = DateTime(
@@ -210,12 +212,12 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                                 });
                               }
                             },
-                            child: Text(pickerDateFormatter.format(start)),
+                            child: Text(pickerDateFormatter.format(start)), //formats as yyyy(int) mmm(char) dd(int)
                           ),
                         ),
                       ),
 
-                      Container(
+                      Container(// contains the time button
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: Colors.grey,
@@ -227,7 +229,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                           height: 35,
                           child: TextButton(
                             onPressed: () async {
-                              final picked = await _showTimePicker(context, start);
+                              final picked = await _showTimePicker(context, start); //calls the time picker to set start time
                               if (picked != null) {
                                 setState(() {
                                   start = DateTime(
@@ -250,7 +252,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                   const SizedBox(height: 20),
                   Text("End:", style: TextStyle(fontSize: 15)),
                   const SizedBox(height: 7),
-                  Row(
+                  Row(// contains buttons same as start but for end styled exactly the same
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
@@ -326,7 +328,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                       );
                       if (selectedIndex == -1) selectedIndex = 0;
 
-                      await Picker(
+                      await Picker(// scrollable to choose repeat options
                         adapter: PickerDataAdapter<String>(
                           pickerData: repeatOptions,
                         ),
@@ -353,6 +355,9 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                   ),
 
                   if (repeatRule != "Never" && specifier == 0) ...[
+                    //button for the end date if a repeat will occur
+                    //doesn't show button if no repeat selected or on edit version of popup
+                    //styled like other date buttons
                     const SizedBox(height: 20),
                     const Text("Repeat End Date", style: TextStyle(fontSize: 15)),
                     const SizedBox(height: 7),
@@ -391,8 +396,8 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
               ),
             ),
 
-            actions: [
-              TextButton(
+            actions: [ //provides buttons for cancel (delete when editing) and save
+              TextButton( //just pop when canceled as nothing needs to happen
                 onPressed: () => Navigator.pop(context, null),
                 child: Text("Cancel"),
               ),
@@ -403,7 +408,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                   onPressed: repeatRule == null
                       ? null
                       : () {
-                          deleteEvent(event, repeatRule!, onUpdate);
+                          deleteEvent(event, repeatRule!, onUpdate); //calls function to do the work
                           Navigator.pop(context, null);
                         },
                   child: Text(
@@ -422,7 +427,8 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                     : () {
                         if (specifier == 1) {
                           // Logic for Editing an existing event
-                          // (Note: Your original logic here seemed to delete and re-insert)
+                          //calls delete event to add either exdate or remove all events with past info
+                          //then inserts new event with new values
                           repeatRule = "This Event";
                           deleteEvent(event, repeatRule!, onUpdate);
                           final db_helper = DatabaseHelper();
@@ -437,7 +443,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
                               exdate: "",
                             ),
                           );
-                        } else {
+                        } else { //just pops with Event for a new event as it is handled in upper function
                           // Logic for New Event
                           repeatRule = generateIcsRrule(
                             option: repeatRule!,
@@ -468,7 +474,7 @@ Future<({Event? event, String freq})?> addEditEventPopOut(
   );
 }
 
-Future<DateTime?> _showDatePicker(
+Future<DateTime?> _showDatePicker( //picker for selecting a date of yyyy(int) mmm(char) dd(int)
     BuildContext context,
     DateTime? date,
     ) async {
@@ -478,7 +484,7 @@ Future<DateTime?> _showDatePicker(
     adapter: DateTimePickerAdapter(
       type: PickerDateTimeType.kYMD,
       value: date ?? DateTime.now(),
-      minValue: DateTime(1950),
+      minValue: DateTime(1950), //upper and lower limits
       maxValue: DateTime(2050),
     ),
     title: const Text('Select Date & Time'),
@@ -492,7 +498,7 @@ Future<DateTime?> _showDatePicker(
   return day;
 }
 
-Future<DateTime?> _showTimePicker(
+Future<DateTime?> _showTimePicker( //picker for selecting a time of hh(int) mm(int)
     BuildContext context,
     DateTime? date,
     ) async {
@@ -517,7 +523,7 @@ Future<DateTime?> _showTimePicker(
 }
 
 void deleteEvent(Event event, String freq, VoidCallback onUpdate) async {
-  final db_helper = DatabaseHelper();
+  final db_helper = DatabaseHelper(); //access to needed db functions
 
   print("Deleting event: ${event.title}, Frequency: $freq");
 
@@ -560,8 +566,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   DateTime? _selectedDay;
   DateTime _focusedDay = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
-  int _selectedIndex = 0;
-  Color dailyEventBorderColour = Colors.black;
+  Color dailyEventBorderColour = Colors.black; // values used to fix mixups with theme change
   Color calendarDots = Colors.deepOrangeAccent;
   Color sideBarTextColour = Colors.black;
 
@@ -570,6 +575,9 @@ class _CalendarHomePage extends State<CalendarHomePage> {
   late ValueNotifier<List<DisplayEvent>> _selectedEvents = ValueNotifier([]);
 
   /// Schedules a notification for each event one hour before it starts.
+  /// future functionality should only schedule one notif per id
+  /// and update said notif to the next occurrence when current is past
+  /// so as to save on space especially with rrule events (didn't complete)
   Future<void> _scheduleAllEventNotifications(
     LinkedHashMap<DateTime, List<DisplayEvent>> eventsMap,
   ) async {
@@ -614,7 +622,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
     return eventsMap[day] ?? [];
   }
 
-  void _updateCalendar() {
+  void _updateCalendar() { //used to refresh calendar upon any change in the db
     setState(() {
       _eventsFuture = getEventsFromDatabase();
       _eventsFuture.then((eventsMap) {
@@ -624,7 +632,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
     });
   }
 
-  void changeEventBorderColour() {
+  void changeEventBorderColour() { //used to fix colors for certain items upon theme change
     if (dailyEventBorderColour == Colors.black) {
       dailyEventBorderColour = Colors.white70;
     } else {
@@ -644,12 +652,13 @@ class _CalendarHomePage extends State<CalendarHomePage> {
     }
   }
 
-  Future<void> _requestNotificationPermission() async {
+  Future<void> _requestNotificationPermission() async { //upon first start up asks permission to send notifs
     if (Platform.isAndroid && await Permission.notification.isDenied) {
       await Permission.notification.request();
     }
   }
 
+  //beginning of notif functionality
   static const AndroidNotificationDetails androidPlatformChannelSpecifics =
       AndroidNotificationDetails(
         'your_channel_id',
@@ -673,7 +682,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
     );
   }
 
-  Future<void> _addEventFromIcs(String icsText) async {
+  Future<void> _addEventFromIcs(String icsText) async { //calls ics function to parse and add events
     await saveIcsToDatabase(icsText);
 
     if (!mounted) return;
@@ -681,7 +690,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
       const SnackBar(content: Text('Calendar updated')),
     );
 
-    _updateCalendar();
+    _updateCalendar(); //refreshes calendar for new events
   }
 
   @override
@@ -717,7 +726,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
       drawer: Drawer(
         child: SafeArea(
           child: Builder(
-            builder: (drawerContext) => NavigationRail(
+            builder: (drawerContext) => NavigationRail( //side bar with access to pages
               selectedIndex: null,
               onDestinationSelected: (int index) async {
                 //setState(() => _selectedIndex = index);
@@ -733,7 +742,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                       }),
                     ),
                   );
-                } else if (index == 2) {
+                } else if (index == 2) { //toggle the theme colors
                   changeEventBorderColour();
                   widget.toggleTheme();
                 }
@@ -749,7 +758,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                   icon: Icon(Icons.chat_outlined, size: 35),
                   label: Text('AI chat'),
                 ),
-                NavigationRailDestination(
+                NavigationRailDestination( //theme color toggle
                   icon: Icon(Icons.invert_colors, size: 40),
                   label: Text('Colour Theme'),
                 ),
@@ -780,7 +789,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
               );
             }
 
-            return Padding(
+            return Padding( //borders and white spacing for iCalendar
               padding: const EdgeInsets.only(top: 20.0),
               child: Column(
                 children: <Widget>[
@@ -829,7 +838,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                     ),
                   ),
                   const SizedBox(height: 30.0),
-                  SizedBox(
+                  SizedBox( // button to allow user import of ics file to add events
                     width: 150.0,
                     height: 50.0,
                     child: FilledButton(
@@ -843,7 +852,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                     ),
                   ),
                   const SizedBox(height: 10.0),
-                  SizedBox(
+                  SizedBox(// button to call the event popout
                     width: 150.0,
                     height: 50.0,
                     child: FilledButton(
@@ -865,7 +874,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                     ),
                   ),
                   const SizedBox(height: 30.0),
-                  Expanded(
+                  Expanded( //displays current selected days events
                     child: ValueListenableBuilder<List<DisplayEvent>>(
                       valueListenable: _selectedEvents,
                       builder: (context, value, _) {
@@ -900,7 +909,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                                   ' - '
                                   '${e.endTime.hour.toString().padLeft(2, '0')}:${e.endTime.minute.toString().padLeft(2, '0')}',
                                 ),
-                                trailing: IconButton(
+                                trailing: IconButton( //button to open event popout for edit
                                   onPressed: () {
                                     addEditEvent(
                                       context,
@@ -940,6 +949,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
 }
 
 List<Event> parseIcsToDisplayEvents(String icsText) {
+  //per function name parses ics string but switched to Event for ease of use
   final events = <Event>[];
   final blocks = icsText.split('BEGIN:VEVENT');
   for (final block in blocks) {
@@ -997,6 +1007,7 @@ List<Event> parseIcsToDisplayEvents(String icsText) {
 }
 
 DateTime _parseIcsDate(String line) {
+  //parses a DateTime from a string value
   final parts = line.split(':');
   final value = parts.last.trim();
   if (value.endsWith('Z')) {

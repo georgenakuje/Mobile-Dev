@@ -7,11 +7,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'calendar_page.dart';
 
+// entry point of the App
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.init();
   await dotenv.load(fileName: ".env"); //load api keys
 
+  //LLM tests
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -23,5 +25,6 @@ void main() async {
     );
   }
 
+  //call App
   runApp(const ProviderScope(child: Calendar()));
 }

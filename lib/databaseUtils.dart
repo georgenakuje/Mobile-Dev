@@ -5,7 +5,9 @@ import 'package:path/path.dart';
 import 'event.dart';
 import 'package:rrule/rrule.dart';
 
+// initiating default today value
 final kToday = DateTime.now();
+// sets the upper and lower limits of the databases date acceptance
 final kFirstDay = DateTime(1900, 1, 1);
 final kLastDay = DateTime(2100, 12, 31);
 
@@ -17,6 +19,7 @@ DateTime _d(DateTime d) => DateTime(d.year, d.month, d.day);
 // --- Database Helper Class ---
 
 class DatabaseHelper {
+  // init connection to database
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
@@ -32,6 +35,7 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
+    //opens path to the database
     final databasePath = await getDatabasesPath();
     final path = join(databasePath, databaseName);
 
@@ -73,13 +77,16 @@ class DatabaseHelper {
   }
 
   Future<int> deleteEvent(int? id) async {
+    // calls delete function in database to remove 1 or more event
     final db = await database;
     return await db.delete('events', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<Event?> fetchById(int? id) async {
+    // attempts to find an Event from db through given id
     final db = await database;
 
+    // returns List if events matching id
     final List<Map<String, dynamic>> maps = await db.query(
       'events',
       where: 'id = ?',
@@ -95,6 +102,7 @@ class DatabaseHelper {
   }
 
   Future<int> addExdateToEvent(int masterId, DateTime exdate) async {
+    // adds/changes current exdate which is the exemption rule
     final db = await database;
 
     // Fetch the current event record to get the existing exdate string
@@ -281,6 +289,7 @@ Future<LinkedHashMap<DateTime, List<DisplayEvent>>>
 getEventsFromDatabase() async {
   final dbHelper = DatabaseHelper();
   final allEvents = await dbHelper.getEventsForRange(
+    // gets all events within a 1 year +/- of the current day
     DateTime.now().subtract(Duration(days: 365)),
     DateTime.now().add(Duration(days: 365)),
   );
