@@ -652,11 +652,12 @@ class _CalendarHomePage extends State<CalendarHomePage> {
 
   static const AndroidNotificationDetails androidPlatformChannelSpecifics =
       AndroidNotificationDetails(
-        'your_channel_id',
-        'your_channel_name',
+        '1',
+        'event_notification',
         channelDescription: 'your channel description',
         importance: Importance.max,
         priority: Priority.high,
+        styleInformation: BigTextStyleInformation(''),
       );
 
   static const NotificationDetails platformChannelSpecifics =
@@ -890,7 +891,7 @@ class _CalendarHomePage extends State<CalendarHomePage> {
                                     await flutterLocalNotificationsPlugin.show(
                                       0,
                                       'These are your event details!',
-                                      '${e.title}' + ' starting at ${e.startTime.hour.toString()} and ending at ${e.endTime.hour.toString()}',
+                                      'Event: ${e.title}\nStart Time: ${e.startTime.hour.toString()}\nEnd Time: ${e.endTime.hour.toString()}\nDate: ${e.startTime.day.toString()}/${e.startTime.month.toString()}\nDescription: ${e.description}\nID: ${e.id}',
                                       platformChannelSpecifics,
                                       payload: 'Notification Payload',
                                     ),
