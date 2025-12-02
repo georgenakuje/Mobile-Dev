@@ -100,7 +100,7 @@ void addEditEvent(
     onUpdate,
   );
 
-  final _ = DatabaseHelper();
+  final db_helper = DatabaseHelper();
   if (result != null) {
     Event? newEvent = result.event;
     if (specifier == 1) {
@@ -109,6 +109,7 @@ void addEditEvent(
 
       onUpdate();
     } else if (newEvent != null) {
+      Future<int> id = db_helper.insertEvent(newEvent);
       print("adding");
       onUpdate();
     }
