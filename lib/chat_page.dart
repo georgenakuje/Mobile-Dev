@@ -101,7 +101,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     caseSensitive: false,
     dotAll: true, // Allows '.' to match newlines
   );
-  final TextEditingController _textController = TextEditingController();
+  final TextEditingController _textController = TextEditingController(); //chat message controller
   final List<Message> _messages = [];
   bool firstMessage = true; // State variable to track the first message
 
@@ -185,6 +185,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _importAndSummarizeIcs() async {
     String? events = await importIcsFile();
+
+    //previous functionality that is no longer needed but could prove useful
     // if (events.isEmpty) return;
     //
     // final formatter = DateFormat('EEE MMM d, h:mm a');
@@ -241,7 +243,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppBar(
         title: const Text('Chat Page'),
         actions: [
-          IconButton(
+          IconButton( //button to allow uploading of file to AI
             icon: const Icon(Icons.upload_file),
             tooltip: 'Import .ics file',
             onPressed: _importAndSummarizeIcs,
@@ -283,9 +285,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Row(
           children: <Widget>[
             Flexible(
-              child: TextField(
+              child: TextField( //chat box
                 controller: _textController,
-                onSubmitted: _handleSubmitted,
+                onSubmitted: _handleSubmitted, //call function to send message on submit
                 decoration: const InputDecoration.collapsed(
                   hintText: 'Send a message',
                 ),
@@ -293,7 +295,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: IconButton(
+              child: IconButton( // Button for submission of chat box
                 icon: const Icon(Icons.send),
                 onPressed: () => _handleSubmitted(_textController.text),
               ),
@@ -370,7 +372,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         shrinkWrap:
                             true, // Important to prevent unbounded height errors
                         styleSheet: MarkdownStyleSheet(
-                          p: TextStyle(color: Colors.black87),
+                          p: TextStyle(color: Colors.black87), //makes sure colors are proper when theme changes
                           code: TextStyle(color: Colors.deepPurple),
                         ),
                       )
@@ -378,7 +380,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         message.text,
                         style: TextStyle(
                           color: isUser
-                              ? Colors.black87
+                              ? Colors.black87 //makes sure colors are proper when theme changes
                               : (message.isError
                                     ? Colors.red.shade900
                                     : Colors.black),
@@ -400,7 +402,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 const SizedBox(width: 36), // Placeholder for alignment
             ],
           ),
-          Padding(
+          Padding( //displays error with message
             padding: const EdgeInsets.only(top: 4.0, left: 8.0, right: 8.0),
             child: Text(
               isUser

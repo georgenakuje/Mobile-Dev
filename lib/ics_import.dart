@@ -7,6 +7,11 @@ import 'event.dart';
 import 'services/notification_service.dart'; // <-- correct import
 
 Future<String?> importIcsFile() async {
+  """
+    Function takes no inputs but waits for the user to pick a .ics file from the internal
+    storage of the device.
+    Returns a String version of the file to be parsed later on
+  """;
   final result = await FilePicker.platform.pickFiles(
     type: FileType.custom,
     allowedExtensions: ['ics'],

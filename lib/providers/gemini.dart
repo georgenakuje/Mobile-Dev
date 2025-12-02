@@ -7,6 +7,7 @@ import 'system_prompt.dart';
 
 part 'gemini.g.dart';
 
+//makes call to googles gemini and begins a chat
 @Riverpod(keepAlive: true)
 Future<GenerativeModel> geminiModel(Ref ref) async {
   final systemPrompt = await ref.watch(systemPromptProvider.future);

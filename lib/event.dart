@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'event.g.dart';
 
+//Class to create template for storing event data in the database
 @JsonSerializable()
 class Event {
   final int? id;
@@ -24,6 +25,7 @@ class Event {
     required this.exdate,
   });
 
+  //turns Event class into string and json versions with help from event.g.dart
   factory Event.fromJson(Map<String, dynamic> json) => _$EventFromJson(json);
   Map<String, dynamic> toJson() => _$EventToJson(this);
 
